@@ -1,23 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Flying Cow</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    body {
-      margin: 0;
-      background: #0f172a;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      overflow: hidden;
-    }
-    canvas {
-      background: #1e293b;
-    }
-  </style>
+<meta charset="UTF-8" />
+<title>Flying Cow</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  body { margin:0; background:#0f172a; overflow:hidden; }
+  canvas { display:block; margin:auto; background:#1e293b; }
+</style>
 </head>
 <body>
 
@@ -29,13 +19,24 @@ Telegram.WebApp.ready();
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
+// ===== PRO PHYSICS (ASL) =====
+const FIXED_DT = 1 / 120;
+const GRAVITY = 2200;        // px/s^2
+const JUMP_IMPULSE = -520;  // px/s
+const MAX_FALL_SPEED = 900;
+const DAMPING = 0.995;
+
+const PIPE_SPEED = 160;     // px/s
+const PIPE_GAP = 150;
+const INPUT_BUFFER = 0.12;
+
 // ===== GAME STATE =====
-let state = "start"; // start | play | over
+let state = "start";
 let score = 0;
 let bestScore = Number(localStorage.getItem("bestScore")) || 0;
 
-// ===== COW =====
-const cow = {
+// ===== COW (OLDINGI PROPORSIYA) =====
+let cow = {
   x: 80,
   y: 300,
   w: 40,
@@ -43,84 +44,83 @@ const cow = {
   vy: 0
 };
 
-// Fizika (avval yoqqan sozlamalar)
-const GRAVITY = 0.45;
-const JUMP = -8.5;
-
-// ===== PIPES =====
 let pipes = [];
-let PIPE_GAP = 150;
-let PIPE_SPEED = 2;
+let lastTime = 0;
+let accumulator = 0;
+let inputTimer = 0;
 
-// ===== INPUT =====
-function tap() {
-  if (state === "start") {
-    resetGame();
-    state = "play";
-  } else if (state === "play") {
-    cow.vy = JUMP;
-  } else if (state === "over") {
-    state = "start";
-  }
+// ===== HELPERS =====
+function randY() {
+  return Math.random() * 260 + 60;
 }
 
-canvas.addEventListener("click", tap);
-canvas.addEventListener("touchstart", tap);
-
-// ===== RESET =====
 function resetGame() {
+  score = 0;
   cow.y = 300;
   cow.vy = 0;
-  pipes = [];
-  score = 0;
-  PIPE_SPEED = 2;
-  addPipe();
+  pipes = [{ x: 360, y: randY(), passed:false }];
+  state = "start";
+  inputTimer = 0;
 }
 
-// ===== PIPE =====
-function addPipe() {
-  const top = Math.random() * 220 + 50;
-  pipes.push({ x: 360, y: top, passed: false });
-}
+// ===== INPUT =====
+canvas.addEventListener("touchstart", () => {
+  if (state === "start") {
+    state = "play";
+    cow.vy = JUMP_IMPULSE;
+  } else if (state === "play") {
+    inputTimer = INPUT_BUFFER;
+  } else if (state === "over") {
+    resetGame();
+  }
+});
 
-// ===== UPDATE =====
-function update() {
+// ===== FIXED UPDATE =====
+function fixedUpdate(dt) {
   if (state !== "play") return;
 
-  cow.vy += GRAVITY;
-  cow.y += cow.vy;
+  cow.vy += GRAVITY * dt;
+  if (cow.vy > MAX_FALL_SPEED) cow.vy = MAX_FALL_SPEED;
+  cow.vy *= DAMPING;
+  cow.y += cow.vy * dt;
 
-  // Yer / ship
   if (cow.y < 0 || cow.y + cow.h > 640) {
-    gameOver();
+    state = "over";
+    saveBest();
+    return;
   }
 
   pipes.forEach(p => {
-    p.x -= PIPE_SPEED;
+    p.x -= PIPE_SPEED * dt;
+
+    // Forgiving hitbox
+    const hx = cow.x + 4;
+    const hy = cow.y + 4;
+    const hw = cow.w - 8;
+    const hh = cow.h - 8;
+
+    if (
+      hx < p.x + 50 &&
+      hx + hw > p.x &&
+      (hy < p.y || hy + hh > p.y + PIPE_GAP)
+    ) {
+      state = "over";
+      saveBest();
+    }
 
     if (!p.passed && p.x + 50 < cow.x) {
       p.passed = true;
       score++;
-      PIPE_SPEED += 0.05; // difficulty scaling
-    }
-
-    // Collision
-    if (
-      cow.x < p.x + 50 &&
-      cow.x + cow.w > p.x &&
-      (cow.y < p.y || cow.y + cow.h > p.y + PIPE_GAP)
-    ) {
-      gameOver();
     }
   });
 
+  if (pipes[pipes.length - 1].x < 180) {
+    pipes.push({ x: 360, y: randY(), passed:false });
+  }
   if (pipes[0].x < -60) pipes.shift();
-  if (pipes[pipes.length - 1].x < 200) addPipe();
 }
 
-// ===== GAME OVER =====
-function gameOver() {
-  state = "over";
+function saveBest() {
   if (score > bestScore) {
     bestScore = score;
     localStorage.setItem("bestScore", bestScore);
@@ -129,9 +129,9 @@ function gameOver() {
 
 // ===== DRAW =====
 function draw() {
-  ctx.clearRect(0, 0, 360, 640);
+  ctx.clearRect(0,0,360,640);
 
-  // ===== COW (KICHIK BOSH, OLDINGI HOLAT) =====
+  // ===== SIGIR (OLDINGI KICHIK BOSH) =====
   ctx.fillStyle = "white";
   ctx.fillRect(cow.x, cow.y, cow.w, cow.h);
 
@@ -143,7 +143,7 @@ function draw() {
   // Mouth
   ctx.fillRect(cow.x + 18, cow.y + 24, 4, 2);
 
-  // Hair (kichik sariq)
+  // Small blonde hair
   ctx.fillStyle = "#F6D365";
   ctx.beginPath();
   ctx.moveTo(cow.x + 14, cow.y);
@@ -172,7 +172,6 @@ function draw() {
     ctx.font = "18px Arial";
     ctx.fillText("Tap to Start", 180, 320);
   }
-
   if (state === "over") {
     ctx.font = "24px Arial";
     ctx.fillText("Game Over", 180, 300);
@@ -181,13 +180,31 @@ function draw() {
   }
 }
 
-// ===== LOOP =====
-function loop() {
-  update();
+// ===== MAIN LOOP =====
+function loop(time) {
+  if (!lastTime) lastTime = time;
+  let delta = (time - lastTime) / 1000;
+  if (delta > 0.25) delta = 0.25;
+  lastTime = time;
+
+  accumulator += delta;
+  inputTimer -= delta;
+
+  while (accumulator >= FIXED_DT) {
+    if (inputTimer > 0 && state === "play") {
+      cow.vy = JUMP_IMPULSE;
+      inputTimer = 0;
+    }
+    fixedUpdate(FIXED_DT);
+    accumulator -= FIXED_DT;
+  }
+
   draw();
   requestAnimationFrame(loop);
 }
-loop();
+
+resetGame();
+requestAnimationFrame(loop);
 </script>
 
 </body>
