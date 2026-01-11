@@ -6,7 +6,7 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   body { margin:0; background:#0f172a; overflow:hidden; }
-  canvas { display:block; margin:auto; background:#1e293b; }
+  canvas { display:block; margin:auto; }
 </style>
 </head>
 <body>
@@ -19,105 +19,66 @@ Telegram.WebApp.ready();
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-// ===== PRO PHYSICS (ASL) =====
-const FIXED_DT = 1 / 120;
+// ================= PRO PHYSICS =================
+const FIXED_DT = 1/120;
 const GRAVITY = 2200;        // px/s^2
 const JUMP_IMPULSE = -520;  // px/s
 const MAX_FALL_SPEED = 900;
 const DAMPING = 0.995;
 
-const PIPE_SPEED = 160;     // px/s
-const PIPE_GAP = 150;
+let PIPE_SPEED = 160;       // px/s
+let PIPE_GAP = 150;         // will shrink slowly
 const INPUT_BUFFER = 0.12;
 
-// ===== GAME STATE =====
-let state = "start";
+// ================= GAME STATE =================
+let state = "start"; // start | play | over
 let score = 0;
 let bestScore = Number(localStorage.getItem("bestScore")) || 0;
 
-// ===== COW (OLDINGI PROPORSIYA) =====
-let cow = {
-  x: 80,
-  y: 300,
-  w: 40,
-  h: 40,
-  vy: 0
-};
+// Soft goals
+const goals = [5, 10, 20, 30, 50];
+let goalText = "";
+let goalTimer = 0;
 
+// ================= COW (PROPORSIYA O‘ZGARMAGAN) =================
+const cow = { x: 80, y: 300, w: 40, h: 40, vy: 0 };
+
+// ================= PIPES =================
 let pipes = [];
+
+// ================= TIMING =================
 let lastTime = 0;
 let accumulator = 0;
 let inputTimer = 0;
 
-// ===== HELPERS =====
-function randY() {
-  return Math.random() * 260 + 60;
+// ================= SOUND (BOSHQARILADIGAN, YUMSHOQ) =================
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioCtx();
+
+function beep(freq=520, dur=0.05, vol=0.05) {
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.connect(g); g.connect(audioCtx.destination);
+  o.frequency.value = freq;
+  g.gain.value = vol;
+  o.start();
+  o.stop(audioCtx.currentTime + dur);
 }
+
+// ================= HELPERS =================
+function randY() { return Math.random() * 260 + 60; }
 
 function resetGame() {
   score = 0;
+  PIPE_SPEED = 160;
+  PIPE_GAP = 150;
   cow.y = 300;
   cow.vy = 0;
   pipes = [{ x: 360, y: randY(), passed:false }];
+  goalText = "";
+  goalTimer = 0;
   state = "start";
   inputTimer = 0;
-}
-
-// ===== INPUT =====
-canvas.addEventListener("touchstart", () => {
-  if (state === "start") {
-    state = "play";
-    cow.vy = JUMP_IMPULSE;
-  } else if (state === "play") {
-    inputTimer = INPUT_BUFFER;
-  } else if (state === "over") {
-    resetGame();
-  }
-});
-
-// ===== FIXED UPDATE =====
-function fixedUpdate(dt) {
-  if (state !== "play") return;
-
-  cow.vy += GRAVITY * dt;
-  if (cow.vy > MAX_FALL_SPEED) cow.vy = MAX_FALL_SPEED;
-  cow.vy *= DAMPING;
-  cow.y += cow.vy * dt;
-
-  if (cow.y < 0 || cow.y + cow.h > 640) {
-    state = "over";
-    saveBest();
-    return;
-  }
-
-  pipes.forEach(p => {
-    p.x -= PIPE_SPEED * dt;
-
-    // Forgiving hitbox
-    const hx = cow.x + 4;
-    const hy = cow.y + 4;
-    const hw = cow.w - 8;
-    const hh = cow.h - 8;
-
-    if (
-      hx < p.x + 50 &&
-      hx + hw > p.x &&
-      (hy < p.y || hy + hh > p.y + PIPE_GAP)
-    ) {
-      state = "over";
-      saveBest();
-    }
-
-    if (!p.passed && p.x + 50 < cow.x) {
-      p.passed = true;
-      score++;
-    }
-  });
-
-  if (pipes[pipes.length - 1].x < 180) {
-    pipes.push({ x: 360, y: randY(), passed:false });
-  }
-  if (pipes[0].x < -60) pipes.shift();
 }
 
 function saveBest() {
@@ -127,15 +88,103 @@ function saveBest() {
   }
 }
 
-// ===== DRAW =====
-function draw() {
-  ctx.clearRect(0,0,360,640);
+// ================= INPUT =================
+canvas.addEventListener("touchstart", handleTap);
+canvas.addEventListener("click", handleTap);
 
-  // ===== SIGIR (OLDINGI KICHIK BOSH) =====
+function handleTap() {
+  if (audioCtx.state === "suspended") audioCtx.resume();
+
+  if (state === "start") {
+    state = "play";
+    cow.vy = JUMP_IMPULSE;
+    beep(520, 0.06, 0.06);
+    Telegram.WebApp.HapticFeedback.impactOccurred("light");
+  } else if (state === "play") {
+    inputTimer = INPUT_BUFFER;
+    beep(520, 0.05, 0.05);
+    Telegram.WebApp.HapticFeedback.impactOccurred("light");
+  } else if (state === "over") {
+    resetGame();
+  }
+}
+
+// ================= FIXED UPDATE =================
+function fixedUpdate(dt) {
+  if (state !== "play") return;
+
+  // Cow physics
+  cow.vy += GRAVITY * dt;
+  if (cow.vy > MAX_FALL_SPEED) cow.vy = MAX_FALL_SPEED;
+  cow.vy *= DAMPING;
+  cow.y += cow.vy * dt;
+
+  if (cow.y < 0 || cow.y + cow.h > 640) {
+    state = "over";
+    saveBest();
+    beep(180, 0.2, 0.08);
+    Telegram.WebApp.HapticFeedback.notificationOccurred("error");
+    return;
+  }
+
+  // Pipes
+  pipes.forEach(p => {
+    p.x -= PIPE_SPEED * dt;
+
+    // Forgiving hitbox
+    const hx = cow.x + 4, hy = cow.y + 4;
+    const hw = cow.w - 8, hh = cow.h - 8;
+
+    if (
+      hx < p.x + 50 &&
+      hx + hw > p.x &&
+      (hy < p.y || hy + hh > p.y + PIPE_GAP)
+    ) {
+      state = "over";
+      saveBest();
+      beep(180, 0.2, 0.08);
+      Telegram.WebApp.HapticFeedback.notificationOccurred("error");
+    }
+
+    if (!p.passed && p.x + 50 < cow.x) {
+      p.passed = true;
+      score++;
+
+      // ===== Difficulty scaling (SEZILMAYDI) =====
+      PIPE_SPEED += 1.5;                 // sekin tezlashadi
+      PIPE_GAP = Math.max(120, PIPE_GAP - 0.8); // juda sekin qisqaradi
+
+      // ===== Soft goals =====
+      if (goals.includes(score)) {
+        goalText = `Nice! ${score} 🔥`;
+        goalTimer = 1.2;
+        beep(720, 0.1, 0.07);
+        Telegram.WebApp.HapticFeedback.notificationOccurred("success");
+      }
+    }
+  });
+
+  if (pipes[pipes.length - 1].x < 180) {
+    pipes.push({ x: 360, y: randY(), passed:false });
+  }
+  if (pipes[0].x < -60) pipes.shift();
+}
+
+// ================= DRAW =================
+function drawBackground() {
+  const g = ctx.createLinearGradient(0,0,0,640);
+  g.addColorStop(0, "#0f172a");
+  g.addColorStop(1, "#020617");
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,360,640);
+}
+
+function drawCow() {
+  // Body
   ctx.fillStyle = "white";
   ctx.fillRect(cow.x, cow.y, cow.w, cow.h);
 
-  // Eyes (kichik)
+  // Eyes (kichik, oldingi holat)
   ctx.fillStyle = "black";
   ctx.fillRect(cow.x + 12, cow.y + 14, 3, 3);
   ctx.fillRect(cow.x + 25, cow.y + 14, 3, 3);
@@ -150,15 +199,19 @@ function draw() {
   ctx.lineTo(cow.x + 20, cow.y - 6);
   ctx.lineTo(cow.x + 26, cow.y);
   ctx.fill();
+}
 
-  // ===== PIPES =====
+function drawPipes() {
   ctx.fillStyle = "#22c55e";
   pipes.forEach(p => {
+    // top
     ctx.fillRect(p.x, 0, 50, p.y);
+    // bottom
     ctx.fillRect(p.x, p.y + PIPE_GAP, 50, 640);
   });
+}
 
-  // ===== UI =====
+function drawUI(dt) {
   ctx.fillStyle = "white";
   ctx.font = "20px Arial";
   ctx.textAlign = "left";
@@ -178,9 +231,23 @@ function draw() {
     ctx.font = "18px Arial";
     ctx.fillText("Tap to restart", 180, 340);
   }
+
+  // Soft goal text
+  if (goalTimer > 0) {
+    ctx.font = "22px Arial";
+    ctx.fillText(goalText, 180, 120);
+    goalTimer -= dt;
+  }
 }
 
-// ===== MAIN LOOP =====
+function draw(dt) {
+  drawBackground();
+  drawCow();
+  drawPipes();
+  drawUI(dt);
+}
+
+// ================= MAIN LOOP =================
 function loop(time) {
   if (!lastTime) lastTime = time;
   let delta = (time - lastTime) / 1000;
@@ -199,7 +266,7 @@ function loop(time) {
     accumulator -= FIXED_DT;
   }
 
-  draw();
+  draw(delta);
   requestAnimationFrame(loop);
 }
 
