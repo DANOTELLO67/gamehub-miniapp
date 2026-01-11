@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Roblox Uz Platform</title>
+    <title>Roblox Uz Hub</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -12,7 +12,7 @@
             --card-bg: #1e293b;
             --text-color: #ffffff;
             --accent-color: #38bdf8;
-            --button-grad: linear-gradient(90deg, #38bdf8, #818cf8);
+            --btn-grad: linear-gradient(135deg, #3b82f6, #8b5cf6);
         }
 
         body {
@@ -20,45 +20,55 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
+            padding: 0;
+            overflow: hidden; /* O'yin payti skroll bo'lmasligi uchun */
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- HUB (Menyu) Qismi --- */
+        #hub-container {
             padding: 20px;
+            flex: 1;
+            overflow-y: auto;
             display: flex;
             flex-direction: column;
             align-items: center;
         }
 
-        header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
         header h1 {
-            font-size: 24px;
-            margin: 0;
-            background: var(--button-grad);
+            font-size: 26px;
+            margin: 10px 0;
+            background: var(--btn-grad);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            text-align: center;
         }
 
         .user-info {
-            font-size: 14px;
+            text-align: center;
             color: #94a3b8;
+            margin-bottom: 25px;
+            font-size: 14px;
         }
 
-        /* O'yinlar Grid - Roblox stili */
         .games-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 15px;
             width: 100%;
-            max-width: 500px;
+            max-width: 400px;
         }
 
         .game-card {
             background: var(--card-bg);
-            border-radius: 15px;
-            overflow: hidden;
-            transition: transform 0.2s;
+            border-radius: 16px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             border: 1px solid #334155;
+            transition: transform 0.1s;
             cursor: pointer;
         }
 
@@ -66,147 +76,351 @@
             transform: scale(0.95);
         }
 
-        .game-thumb {
-            width: 100%;
-            height: 120px;
-            background: #334155;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .game-icon {
             font-size: 40px;
-        }
-
-        .game-info {
-            padding: 10px;
-            text-align: center;
+            margin-bottom: 10px;
+            display: block;
         }
 
         .game-title {
             font-weight: 600;
             font-size: 14px;
-            margin-bottom: 5px;
         }
 
-        /* Action Buttons */
-        .actions {
+        .add-btn {
             margin-top: 30px;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .btn {
-            background: var(--button-grad);
-            border: none;
-            padding: 15px;
-            border-radius: 12px;
+            background: var(--btn-grad);
             color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 12px;
             font-weight: bold;
+            width: 100%;
+            max-width: 400px;
             font-size: 16px;
-            cursor: pointer;
-            text-align: center;
-            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
         }
 
-        .btn-secondary {
-            background: transparent;
-            border: 2px solid #334155;
-        }
-
-        #game-stage {
-            display: none;
+        /* --- O'YIN QISMI (Oyna) --- */
+        #game-container {
+            display: none; /* Boshida yashirin */
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: black;
+            background: #000;
             z-index: 1000;
         }
 
-        .close-game {
+        #game-header {
             position: absolute;
             top: 10px;
-            right: 10px;
-            background: rgba(255,255,255,0.2);
+            left: 10px;
+            z-index: 1001;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.2);
             color: white;
             border: none;
-            padding: 5px 15px;
+            padding: 8px 16px;
             border-radius: 20px;
-            z-index: 1001;
+            font-weight: bold;
+            backdrop-filter: blur(5px);
+        }
+
+        /* Iframe (Tashqi o'yinlar uchun) */
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* --- LOCAL FLAPPY BIRD (Canvas) --- */
+        #flappy-canvas {
+            display: none;
+            width: 100%;
+            height: 100%;
+            background: #70c5ce; /* Osmon rangi */
+        }
+        
+        #flappy-score {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 50px;
+            font-weight: bold;
+            color: white;
+            z-index: 1002;
+            display: none;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        #start-msg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            display: none;
+            z-index: 1002;
+            text-shadow: 1px 1px 0 #000;
         }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1 id="platform-name">ROBLOX UZ HUB</h1>
-        <p class="user-info" id="user-welcome">Xush kelibsiz!</p>
-    </header>
+    <div id="hub-container">
+        <header>
+            <h1>ROBLOX UZ HUB</h1>
+            <div class="user-info" id="username-display">Salom, Gamer!</div>
+        </header>
 
-    <div class="games-grid" id="games-list">
-        <div class="game-card" onclick="startGame('https://wayou.github.io/FlappyBird/')">
-            <div class="game-thumb">🐦</div>
-            <div class="game-info">
-                <div class="game-title">Flappy Bird</div>
+        <div class="games-grid">
+            <div class="game-card" onclick="playLocalFlappy()">
+                <span class="game-icon">🐦</span>
+                <div class="game-title">Flappy Bird (Tezkor)</div>
             </div>
-        </div>
 
-        <div class="game-card" onclick="startGame('https://play2048.co/')">
-            <div class="game-thumb">🔢</div>
-            <div class="game-info">
-                <div class="game-title">2048 Classic</div>
-            </div>
-        </div>
-
-        <div class="game-card" onclick="startGame('https://www.towergame.app/')">
-            <div class="game-thumb">🏗️</div>
-            <div class="game-info">
+            <div class="game-card" onclick="playIframe('https://iamkun.github.io/tower_game/')">
+                <span class="game-icon">🏗️</span>
                 <div class="game-title">Tower Builder</div>
             </div>
+
+            <div class="game-card" onclick="playIframe('https://gabrielecirulli.github.io/2048/')">
+                <span class="game-icon">🔢</span>
+                <div class="game-title">2048 Classic</div>
+            </div>
+
+            <div class="game-card" onclick="playIframe('https://hextris.io/')">
+                <span class="game-icon">🛑</span>
+                <div class="game-title">Hextris</div>
+            </div>
         </div>
+
+        <button class="add-btn" onclick="addGamePopup()">➕ O'z o'yiningni qo'sh</button>
     </div>
 
-    <div class="actions">
-        <button class="btn" onclick="requestAddGame()">➕ O'z o'yiningni qo'sh</button>
-        <button class="btn btn-secondary" onclick="tg.close()">Yopish</button>
-    </div>
+    <div id="game-container">
+        <div id="game-header">
+            <button class="back-btn" onclick="closeGame()">🏠 Chiqish</button>
+        </div>
+        
+        <iframe id="game-frame"></iframe>
 
-    <div id="game-stage">
-        <button class="close-game" onclick="closeGame()">X</button>
-        <iframe id="game-frame" src="" frameborder="0" style="width:100%; height:100%;"></iframe>
+        <canvas id="flappy-canvas"></canvas>
+        <div id="flappy-score">0</div>
+        <div id="start-msg">O'ynash uchun bosing!</div>
     </div>
 
     <script>
-        let tg = window.Telegram.WebApp;
-        tg.expand(); // WebAppni to'liq ekranga yoyish
-
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        
         // Foydalanuvchi ismini chiqarish
-        if (tg.initDataUnsafe.user) {
-            document.getElementById('user-welcome').innerText = `Salom, ${tg.initDataUnsafe.user.first_name}! Tayyormisiz?`;
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            document.getElementById('username-display').innerText = 
+                `Salom, ${tg.initDataUnsafe.user.first_name}! Tayyormisiz?`;
         }
 
-        function startGame(url) {
-            document.getElementById('game-frame').src = url;
-            document.getElementById('game-stage').style.display = 'block';
-        }
+        // Elementlar
+        const hub = document.getElementById('hub-container');
+        const gameContainer = document.getElementById('game-container');
+        const iframe = document.getElementById('game-frame');
+        const canvas = document.getElementById('flappy-canvas');
+        const scoreEl = document.getElementById('flappy-score');
+        const startMsg = document.getElementById('start-msg');
+
+        // --- FUNKSIYALAR ---
 
         function closeGame() {
-            document.getElementById('game-stage').style.display = 'none';
-            document.getElementById('game-frame').src = '';
+            // O'yinni yopish va Hubga qaytish
+            gameContainer.style.display = 'none';
+            hub.style.display = 'flex';
+            iframe.src = ''; // Iframe tozalash
+            iframe.style.display = 'none';
+            canvas.style.display = 'none';
+            scoreEl.style.display = 'none';
+            startMsg.style.display = 'none';
+            gameRunning = false; // Flappy to'xtatish
         }
 
-        function requestAddGame() {
-            tg.showPopup({
-                title: 'O\'yin qo\'shish',
-                message: 'O\'z o\'yiningizni platformaga qo\'shmoqchimisiz? Bizga GitHub havolasini yuboring.',
-                buttons: [{type: 'ok', text: 'Tushundim'}]
-            });
-            // Botga ma'lumot yuborish
-            tg.sendData("add_game_request");
+        // Iframe o'yinlarni ochish (Tower, 2048)
+        function playIframe(url) {
+            hub.style.display = 'none';
+            gameContainer.style.display = 'block';
+            iframe.style.display = 'block';
+            iframe.src = url;
         }
+
+        function addGamePopup() {
+            tg.showPopup({
+                title: 'O\'yin yaratish',
+                message: 'O\'z o\'yiningizni GitHub-ga yuklang va linkini botga yuboring. Tez orada bu funksiya ishga tushadi!',
+                buttons: [{type: 'ok'}]
+            });
+        }
+
+        // --- FLAPPY BIRD ENGINE (JavaScript ichida) ---
+        // Bu qism tashqi saytga bog'lanmagan, shuning uchun juda silliq ishlaydi.
+        
+        let ctx;
+        let gameRunning = false;
+        let bird, pipes, score, frame;
+        
+        function playLocalFlappy() {
+            hub.style.display = 'none';
+            gameContainer.style.display = 'block';
+            canvas.style.display = 'block';
+            scoreEl.style.display = 'block';
+            startMsg.style.display = 'block';
+
+            // Canvasni to'g'irlash
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            ctx = canvas.getContext('2d');
+
+            resetGame();
+            
+            // Boshlashni kutish
+            canvas.addEventListener('click', inputHandler);
+            canvas.addEventListener('touchstart', inputHandler);
+            draw();
+        }
+
+        function inputHandler(e) {
+            if (e.type === 'touchstart') e.preventDefault(); // Skrollni bloklash
+            
+            if (!gameRunning) {
+                gameRunning = true;
+                startMsg.style.display = 'none';
+                loop();
+                bird.velocity = -8;
+            } else {
+                bird.velocity = -8; // Sakrash kuchi
+            }
+        }
+
+        function resetGame() {
+            bird = { x: 50, y: canvas.height / 2, width: 30, height: 30, velocity: 0, gravity: 0.5 };
+            pipes = [];
+            score = 0;
+            frame = 0;
+            scoreEl.innerText = score;
+            startMsg.innerText = "Boshlash uchun bosing!";
+            startMsg.style.display = 'block';
+        }
+
+        function loop() {
+            if (!gameRunning) return;
+            
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        function update() {
+            frame++;
+            
+            // Qush fizikasi
+            bird.velocity += bird.gravity;
+            bird.y += bird.velocity;
+
+            // Yerga yoki shiftga urilish
+            if (bird.y + bird.height > canvas.height || bird.y < 0) {
+                gameOver();
+            }
+
+            // Quvurlar qo'shish
+            if (frame % 100 === 0) {
+                let gap = 150; // Quvur oralig'i
+                let pipeHeight = Math.floor(Math.random() * (canvas.height - gap - 100)) + 50;
+                pipes.push({
+                    x: canvas.width,
+                    y: 0,
+                    width: 50,
+                    height: pipeHeight,
+                    type: 'top'
+                });
+                pipes.push({
+                    x: canvas.width,
+                    y: pipeHeight + gap,
+                    width: 50,
+                    height: canvas.height - pipeHeight - gap,
+                    type: 'bottom'
+                });
+            }
+
+            // Quvurlarni harakatlantirish va o'chirish
+            pipes.forEach((pipe, index) => {
+                pipe.x -= 3; // Tezlik
+
+                // To'qnashuvni tekshirish
+                if (
+                    bird.x < pipe.x + pipe.width &&
+                    bird.x + bird.width > pipe.x &&
+                    bird.y < pipe.y + pipe.height &&
+                    bird.y + bird.height > pipe.y
+                ) {
+                    gameOver();
+                }
+
+                // Ochko hisoblash (faqat bitta quvur o'tganda)
+                if (pipe.x + pipe.width < bird.x && !pipe.passed && pipe.type === 'top') {
+                    score++;
+                    scoreEl.innerText = score;
+                    pipe.passed = true;
+                    // Haptic (titrash) effekti - Telegram funksiyasi
+                    tg.HapticFeedback.impactOccurred('light');
+                }
+
+                if (pipe.x + pipe.width < 0) {
+                    pipes.splice(index, 1);
+                }
+            });
+        }
+
+        function draw() {
+            // Fonni tozalash
+            ctx.fillStyle = '#70c5ce';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Qushni chizish (Sariq kvadrat)
+            ctx.fillStyle = '#fbbf24';
+            ctx.fillRect(bird.x, bird.y, bird.width, bird.height);
+            // Qush chegarasi
+            ctx.strokeStyle = '#fff';
+            ctx.strokeRect(bird.x, bird.y, bird.width, bird.height);
+
+            // Quvurlarni chizish (Yashil)
+            ctx.fillStyle = '#22c55e';
+            pipes.forEach(pipe => {
+                ctx.fillRect(pipe.x, pipe.y, pipe.width, pipe.height);
+                // Quvur qirrasi
+                ctx.strokeStyle = '#14532d';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(pipe.x, pipe.y, pipe.width, pipe.height);
+            });
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            tg.HapticFeedback.notificationOccurred('error'); // Xato titrashi
+            
+            // Natijani yuborish (ixtiyoriy)
+            // tg.sendData(JSON.stringify({game: 'flappy', score: score}));
+
+            alert("O'yin tugadi! Natija: " + score);
+            resetGame();
+            draw();
+        }
+
     </script>
 </body>
-  </html>
-  
+                </html>
+    
