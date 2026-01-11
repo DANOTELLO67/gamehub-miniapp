@@ -1,12 +1,20 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8" />
-<title>Flying Cow</title>
+<meta charset="UTF-8">
+<title>GameHub – Flying Cow</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-  body { margin:0; background:#0f172a; overflow:hidden; }
-  canvas { display:block; margin:auto; }
+body {
+  margin:0;
+  background:#020617;
+  font-family:Arial, sans-serif;
+}
+canvas {
+  display:block;
+  margin:auto;
+  background:#020617;
+}
 </style>
 </head>
 <body>
@@ -19,258 +27,202 @@ Telegram.WebApp.ready();
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-// ================= PRO PHYSICS =================
-const FIXED_DT = 1/120;
-const GRAVITY = 2200;        // px/s^2
-const JUMP_IMPULSE = -520;  // px/s
-const MAX_FALL_SPEED = 900;
-const DAMPING = 0.995;
+// ================= GLOBAL STATE =================
+let screen = "menu"; // menu | game | result | leaderboard
 
-let PIPE_SPEED = 160;       // px/s
-let PIPE_GAP = 150;         // will shrink slowly
-const INPUT_BUFFER = 0.12;
+// ================= PLAYER =================
+let playerName = Telegram.WebApp.initDataUnsafe?.user?.first_name || "Player";
+
+// ================= LEADERBOARD (LOCAL) =================
+let leaderboard = JSON.parse(localStorage.getItem("leaderboard") || "[]");
 
 // ================= GAME STATE =================
-let state = "start"; // start | play | over
 let score = 0;
 let bestScore = Number(localStorage.getItem("bestScore")) || 0;
 
-// Soft goals
-const goals = [5, 10, 20, 30, 50];
-let goalText = "";
-let goalTimer = 0;
+// ================= COW =================
+const cow = { x:80, y:300, w:40, h:40, vy:0 };
 
-// ================= COW (PROPORSIYA O‘ZGARMAGAN) =================
-const cow = { x: 80, y: 300, w: 40, h: 40, vy: 0 };
+// ================= PHYSICS (SEN YOQQAN) =================
+const FIXED_DT = 1/120;
+const GRAVITY = 2200;
+const JUMP = -520;
+const MAX_FALL = 900;
+const DAMPING = 0.995;
 
-// ================= PIPES =================
+let PIPE_SPEED = 160;
+let PIPE_GAP = 150;
+const INPUT_BUFFER = 0.12;
+
 let pipes = [];
-
-// ================= TIMING =================
 let lastTime = 0;
-let accumulator = 0;
+let acc = 0;
 let inputTimer = 0;
 
-// ================= SOUND (BOSHQARILADIGAN, YUMSHOQ) =================
-const AudioCtx = window.AudioContext || window.webkitAudioContext;
-const audioCtx = new AudioCtx();
+// ================= UTIL =================
+function randY(){ return Math.random()*260+60; }
 
-function beep(freq=520, dur=0.05, vol=0.05) {
-  const o = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  o.connect(g); g.connect(audioCtx.destination);
-  o.frequency.value = freq;
-  g.gain.value = vol;
-  o.start();
-  o.stop(audioCtx.currentTime + dur);
-}
-
-// ================= HELPERS =================
-function randY() { return Math.random() * 260 + 60; }
-
-function resetGame() {
-  score = 0;
-  PIPE_SPEED = 160;
-  PIPE_GAP = 150;
-  cow.y = 300;
-  cow.vy = 0;
-  pipes = [{ x: 360, y: randY(), passed:false }];
-  goalText = "";
-  goalTimer = 0;
-  state = "start";
-  inputTimer = 0;
-}
-
-function saveBest() {
-  if (score > bestScore) {
-    bestScore = score;
-    localStorage.setItem("bestScore", bestScore);
-  }
+function resetGame(){
+  score=0;
+  cow.y=300; cow.vy=0;
+  PIPE_SPEED=160; PIPE_GAP=150;
+  pipes=[{x:360,y:randY(),passed:false}];
 }
 
 // ================= INPUT =================
-canvas.addEventListener("touchstart", handleTap);
 canvas.addEventListener("click", handleTap);
+canvas.addEventListener("touchstart", handleTap);
 
-function handleTap() {
-  if (audioCtx.state === "suspended") audioCtx.resume();
-
-  if (state === "start") {
-    state = "play";
-    cow.vy = JUMP_IMPULSE;
-    beep(520, 0.06, 0.06);
-    Telegram.WebApp.HapticFeedback.impactOccurred("light");
-  } else if (state === "play") {
-    inputTimer = INPUT_BUFFER;
-    beep(520, 0.05, 0.05);
-    Telegram.WebApp.HapticFeedback.impactOccurred("light");
-  } else if (state === "over") {
-    resetGame();
-  }
+function handleTap(){
+  if(screen==="menu"){ screen="game"; resetGame(); cow.vy=JUMP; return; }
+  if(screen==="game"){ inputTimer=INPUT_BUFFER; return; }
+  if(screen==="result"){ screen="leaderboard"; return; }
+  if(screen==="leaderboard"){ screen="menu"; }
 }
 
-// ================= FIXED UPDATE =================
-function fixedUpdate(dt) {
-  if (state !== "play") return;
-
-  // Cow physics
-  cow.vy += GRAVITY * dt;
-  if (cow.vy > MAX_FALL_SPEED) cow.vy = MAX_FALL_SPEED;
+// ================= UPDATE GAME =================
+function updateGame(dt){
+  cow.vy += GRAVITY*dt;
+  cow.vy = Math.min(cow.vy, MAX_FALL);
   cow.vy *= DAMPING;
-  cow.y += cow.vy * dt;
+  cow.y += cow.vy*dt;
 
-  if (cow.y < 0 || cow.y + cow.h > 640) {
-    state = "over";
-    saveBest();
-    beep(180, 0.2, 0.08);
-    Telegram.WebApp.HapticFeedback.notificationOccurred("error");
-    return;
-  }
+  if(cow.y<0 || cow.y+cow.h>640){ endGame(); return; }
 
-  // Pipes
-  pipes.forEach(p => {
-    p.x -= PIPE_SPEED * dt;
+  pipes.forEach(p=>{
+    p.x -= PIPE_SPEED*dt;
 
-    // Forgiving hitbox
-    const hx = cow.x + 4, hy = cow.y + 4;
-    const hw = cow.w - 8, hh = cow.h - 8;
-
-    if (
-      hx < p.x + 50 &&
-      hx + hw > p.x &&
-      (hy < p.y || hy + hh > p.y + PIPE_GAP)
-    ) {
-      state = "over";
-      saveBest();
-      beep(180, 0.2, 0.08);
-      Telegram.WebApp.HapticFeedback.notificationOccurred("error");
+    if(!p.passed && p.x+50<cow.x){
+      p.passed=true;
+      score++;
+      PIPE_SPEED+=1.5;
+      PIPE_GAP=Math.max(120,PIPE_GAP-0.8);
     }
 
-    if (!p.passed && p.x + 50 < cow.x) {
-      p.passed = true;
-      score++;
-
-      // ===== Difficulty scaling (SEZILMAYDI) =====
-      PIPE_SPEED += 1.5;                 // sekin tezlashadi
-      PIPE_GAP = Math.max(120, PIPE_GAP - 0.8); // juda sekin qisqaradi
-
-      // ===== Soft goals =====
-      if (goals.includes(score)) {
-        goalText = `Nice! ${score} 🔥`;
-        goalTimer = 1.2;
-        beep(720, 0.1, 0.07);
-        Telegram.WebApp.HapticFeedback.notificationOccurred("success");
-      }
+    const hx=cow.x+4, hy=cow.y+4, hw=cow.w-8, hh=cow.h-8;
+    if(hx<p.x+50 && hx+hw>p.x && (hy<p.y || hy+hh>p.y+PIPE_GAP)){
+      endGame();
     }
   });
 
-  if (pipes[pipes.length - 1].x < 180) {
-    pipes.push({ x: 360, y: randY(), passed:false });
+  if(pipes[pipes.length-1].x<180){
+    pipes.push({x:360,y:randY(),passed:false});
   }
-  if (pipes[0].x < -60) pipes.shift();
+  if(pipes[0].x<-60) pipes.shift();
+}
+
+function endGame(){
+  screen="result";
+  if(score>bestScore){
+    bestScore=score;
+    localStorage.setItem("bestScore",bestScore);
+  }
+  leaderboard.push({name:playerName,score});
+  leaderboard.sort((a,b)=>b.score-a.score);
+  leaderboard=leaderboard.slice(0,10);
+  localStorage.setItem("leaderboard",JSON.stringify(leaderboard));
 }
 
 // ================= DRAW =================
-function drawBackground() {
-  const g = ctx.createLinearGradient(0,0,0,640);
-  g.addColorStop(0, "#0f172a");
-  g.addColorStop(1, "#020617");
-  ctx.fillStyle = g;
+function draw(){
+  ctx.clearRect(0,0,360,640);
+
+  // BACKGROUND
+  const g=ctx.createLinearGradient(0,0,0,640);
+  g.addColorStop(0,"#020617");
+  g.addColorStop(1,"#0f172a");
+  ctx.fillStyle=g;
   ctx.fillRect(0,0,360,640);
+
+  if(screen==="menu") drawMenu();
+  if(screen==="game") drawGame();
+  if(screen==="result") drawResult();
+  if(screen==="leaderboard") drawLeaderboard();
 }
 
-function drawCow() {
-  // Body
-  ctx.fillStyle = "white";
-  ctx.fillRect(cow.x, cow.y, cow.w, cow.h);
+function drawMenu(){
+  ctx.fillStyle="white";
+  ctx.font="26px Arial";
+  ctx.textAlign="center";
+  ctx.fillText("🎮 GameHub",180,240);
+  ctx.font="18px Arial";
+  ctx.fillText("Flying Cow",180,280);
+  ctx.fillText("Tap to Play",180,330);
+}
 
-  // Eyes (kichik, oldingi holat)
-  ctx.fillStyle = "black";
-  ctx.fillRect(cow.x + 12, cow.y + 14, 3, 3);
-  ctx.fillRect(cow.x + 25, cow.y + 14, 3, 3);
-
-  // Mouth
-  ctx.fillRect(cow.x + 18, cow.y + 24, 4, 2);
-
-  // Small blonde hair
-  ctx.fillStyle = "#F6D365";
+function drawGame(){
+  // cow
+  ctx.fillStyle="white";
+  ctx.fillRect(cow.x,cow.y,cow.w,cow.h);
+  ctx.fillStyle="black";
+  ctx.fillRect(cow.x+12,cow.y+14,3,3);
+  ctx.fillRect(cow.x+25,cow.y+14,3,3);
+  ctx.fillRect(cow.x+18,cow.y+24,4,2);
+  ctx.fillStyle="#F6D365";
   ctx.beginPath();
-  ctx.moveTo(cow.x + 14, cow.y);
-  ctx.lineTo(cow.x + 20, cow.y - 6);
-  ctx.lineTo(cow.x + 26, cow.y);
+  ctx.moveTo(cow.x+14,cow.y);
+  ctx.lineTo(cow.x+20,cow.y-6);
+  ctx.lineTo(cow.x+26,cow.y);
   ctx.fill();
-}
 
-function drawPipes() {
-  ctx.fillStyle = "#22c55e";
-  pipes.forEach(p => {
-    // top
-    ctx.fillRect(p.x, 0, 50, p.y);
-    // bottom
-    ctx.fillRect(p.x, p.y + PIPE_GAP, 50, 640);
+  // pipes
+  ctx.fillStyle="#22c55e";
+  pipes.forEach(p=>{
+    ctx.fillRect(p.x,0,50,p.y);
+    ctx.fillRect(p.x,p.y+PIPE_GAP,50,640);
   });
+
+  ctx.fillStyle="white";
+  ctx.font="20px Arial";
+  ctx.textAlign="left";
+  ctx.fillText("Score: "+score,10,28);
 }
 
-function drawUI(dt) {
-  ctx.fillStyle = "white";
-  ctx.font = "20px Arial";
-  ctx.textAlign = "left";
-  ctx.fillText("Score: " + score, 10, 28);
-  ctx.fillText("Best: " + bestScore, 10, 52);
-
-  ctx.textAlign = "center";
-  if (state === "start") {
-    ctx.font = "24px Arial";
-    ctx.fillText("🐮 Flying Cow", 180, 280);
-    ctx.font = "18px Arial";
-    ctx.fillText("Tap to Start", 180, 320);
-  }
-  if (state === "over") {
-    ctx.font = "24px Arial";
-    ctx.fillText("Game Over", 180, 300);
-    ctx.font = "18px Arial";
-    ctx.fillText("Tap to restart", 180, 340);
-  }
-
-  // Soft goal text
-  if (goalTimer > 0) {
-    ctx.font = "22px Arial";
-    ctx.fillText(goalText, 180, 120);
-    goalTimer -= dt;
-  }
+function drawResult(){
+  ctx.fillStyle="white";
+  ctx.font="24px Arial";
+  ctx.textAlign="center";
+  ctx.fillText("Game Over",180,260);
+  ctx.font="18px Arial";
+  ctx.fillText("Score: "+score,180,300);
+  ctx.fillText("Best: "+bestScore,180,330);
+  ctx.fillText("Tap to Leaderboard",180,380);
 }
 
-function draw(dt) {
-  drawBackground();
-  drawCow();
-  drawPipes();
-  drawUI(dt);
+function drawLeaderboard(){
+  ctx.fillStyle="white";
+  ctx.font="22px Arial";
+  ctx.textAlign="center";
+  ctx.fillText("🏆 Leaderboard",180,80);
+
+  ctx.font="16px Arial";
+  leaderboard.forEach((p,i)=>{
+    ctx.fillText(`${i+1}. ${p.name} – ${p.score}`,180,130+i*26);
+  });
+
+  ctx.fillText("Tap to Menu",180,520);
 }
 
-// ================= MAIN LOOP =================
-function loop(time) {
-  if (!lastTime) lastTime = time;
-  let delta = (time - lastTime) / 1000;
-  if (delta > 0.25) delta = 0.25;
-  lastTime = time;
+// ================= LOOP =================
+function loop(t){
+  let dt=(t-lastTime)/1000||0;
+  if(dt>0.25)dt=0.25;
+  lastTime=t;
+  acc+=dt;
+  inputTimer-=dt;
 
-  accumulator += delta;
-  inputTimer -= delta;
-
-  while (accumulator >= FIXED_DT) {
-    if (inputTimer > 0 && state === "play") {
-      cow.vy = JUMP_IMPULSE;
-      inputTimer = 0;
+  while(acc>=FIXED_DT){
+    if(screen==="game"){
+      if(inputTimer>0){ cow.vy=JUMP; inputTimer=0; }
+      updateGame(FIXED_DT);
     }
-    fixedUpdate(FIXED_DT);
-    accumulator -= FIXED_DT;
+    acc-=FIXED_DT;
   }
 
-  draw(delta);
+  draw();
   requestAnimationFrame(loop);
 }
 
-resetGame();
 requestAnimationFrame(loop);
 </script>
 
