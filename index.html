@@ -3,309 +3,218 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Roblox Uz - Premium Hub</title>
+    <title>Roblox Uz - Ultra Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg: #050505;
-            --accent: #00f2ff;
-            --glass: rgba(255, 255, 255, 0.03);
-            --border: rgba(255, 255, 255, 0.1);
-        }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
-        body {
-            margin: 0; font-family: 'Outfit', sans-serif;
-            background: var(--bg); color: #fff;
-            overflow: hidden; height: 100vh;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@400;700&display=swap');
+        
+        :root { --p: #00f2ff; --bg: #08080a; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+        body { font-family: 'Poppins', sans-serif; background: var(--bg); color: #fff; overflow: hidden; height: 100vh; }
 
-        /* --- MODERN HUB INTERFACE --- */
-        #hub {
-            display: flex; flex-direction: column; align-items: center;
-            padding: 40px 20px; height: 100%;
-            background: radial-gradient(circle at center, #111 0%, #050505 100%);
-        }
-        .header-logo {
-            font-size: 32px; font-weight: 900; letter-spacing: -1px;
-            background: linear-gradient(to bottom, #fff, #888);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            margin-bottom: 30px;
-        }
-        .grid {
-            display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 350px;
-        }
-        .game-card {
-            background: var(--glass); border: 1px solid var(--border);
-            border-radius: 20px; padding: 20px; display: flex; align-items: center;
-            gap: 20px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .game-card:active { transform: scale(0.97); background: rgba(255,255,255,0.08); border-color: var(--accent); }
-        .icon-box { font-size: 40px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
-        .info h3 { margin: 0; font-size: 18px; font-weight: 700; }
-        .info p { margin: 5px 0 0; font-size: 12px; color: #666; font-weight: 400; }
+        /* --- UI DESIGN --- */
+        #menu { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 30px; }
+        .logo { font-family: 'Bebas Neue', cursive; font-size: 60px; letter-spacing: 4px; color: var(--p); text-shadow: 0 0 20px rgba(0,242,255,0.5); margin-bottom: 40px; }
+        
+        .btn-box { display: grid; gap: 20px; width: 100%; max-width: 300px; }
+        .g-btn { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; display: flex; align-items: center; gap: 15px; transition: 0.3s; cursor: pointer; }
+        .g-btn:active { transform: scale(0.95); background: rgba(0,242,255,0.1); border-color: var(--p); }
+        .g-btn span { font-size: 30px; }
+        .g-btn h3 { font-size: 18px; font-weight: 700; }
 
-        /* --- GAME ENGINE OVERLAY --- */
-        #stage {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; display: none; z-index: 100;
-        }
-        canvas { display: block; }
-        .ui-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; padding: 25px; display: flex; flex-direction: column;
-            justify-content: space-between; align-items: center; z-index: 101;
-        }
-        .score { font-size: 60px; font-weight: 900; opacity: 0.2; }
-        .top-bar { width: 100%; display: flex; justify-content: space-between; pointer-events: auto; }
-        .btn-close {
-            background: var(--glass); border: 1px solid var(--border);
-            color: #fff; padding: 10px 20px; border-radius: 12px; font-weight: 700;
-        }
-        .message { font-size: 20px; font-weight: 700; text-align: center; }
+        /* --- ENGINE CANVAS --- */
+        #stage { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; background: #000; }
+        canvas { display: block; width: 100%; height: 100%; }
+        
+        .hud { position: absolute; top: 0; left: 0; width: 100%; padding: 25px; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; z-index: 10; }
+        .score-ui { font-family: 'Bebas Neue'; font-size: 50px; color: rgba(255,255,255,0.3); pointer-events: none; }
+        .exit-ui { background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 10px 20px; border-radius: 10px; font-weight: 700; pointer-events: auto; }
+        
+        .overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; width: 100%; pointer-events: none; }
+        .overlay h2 { font-family: 'Bebas Neue'; font-size: 40px; letter-spacing: 2px; }
     </style>
 </head>
 <body>
 
-    <div id="hub">
-        <div class="header-logo">ROBLOX UZ</div>
-        <div class="grid">
-            <div class="game-card" onclick="start('flappy')">
-                <div class="icon-box">🐦</div>
-                <div class="info">
-                    <h3 data-key="t1">Flappy Velocity</h3>
-                    <p data-key="d1">Pro Physics Engine</p>
-                </div>
-            </div>
-            <div class="game-card" onclick="start('stack')">
-                <div class="icon-box">🧱</div>
-                <div class="info">
-                    <h3 data-key="t2">Perfect Stack</h3>
-                    <p data-key="d2">High Precision Timing</p>
-                </div>
-            </div>
-            <div class="game-card" onclick="start('knife')">
-                <div class="icon-box">🎯</div>
-                <div class="info">
-                    <h3 data-key="t3">Knife Master</h3>
-                    <p data-key="d3">Tactile Hit Response</p>
-                </div>
-            </div>
+    <div id="menu">
+        <h1 class="logo">ROBLOX UZ</h1>
+        <div class="btn-box">
+            <div class="g-btn" onclick="init('flappy')"><span>🐦</span><div><h3>FLAPPY PRO</h3></div></div>
+            <div class="g-btn" onclick="init('stack')"><span>🧱</span><div><h3>PERFECT STACK</h3></div></div>
+            <div class="g-btn" onclick="init('knife')"><span>🎯</span><div><h3>KNIFE HIT</h3></div></div>
         </div>
     </div>
 
     <div id="stage">
-        <div class="ui-layer">
-            <div class="top-bar">
-                <button class="btn-close" onclick="closeGame()" id="exit-btn">EXIT</button>
-            </div>
-            <div class="score" id="score-val">0</div>
-            <div class="message" id="msg-layer">TAP TO START</div>
+        <div class="hud">
+            <button class="exit-ui" onclick="stop()">EXIT</button>
+            <div class="score-ui" id="scr">0</div>
         </div>
-        <canvas id="gameCanvas"></canvas>
+        <div class="overlay"><h2 id="msg">TAP TO START</h2></div>
+        <canvas id="c"></canvas>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand();
-
-        // 🌐 LINGUALS
-        const lang = {
-            uz: {t1:"Flappy Velocity", d1:"Professional Fizika", t2:"Perfect Stack", d2:"Yuqori Aniqlik", t3:"Knife Master", d3:"Taktil Sezgi", exit:"Chiqish", start:"BOSHLASH", over:"O'YIN TUGADI"},
-            ru: {t1:"Flappy Velocity", d1:"Про-Физика", t2:"Perfect Stack", d2:"Высокая Точность", t3:"Knife Master", d3:"Тактильный Отклик", exit:"Выход", start:"НАЖМИТЕ", over:"ИГРА ОКОНЧЕНА"},
-            en: {t1:"Flappy Velocity", d1:"Pro Physics Engine", t2:"Perfect Stack", d2:"High Precision Timing", t3:"Knife Master", d3:"Tactile Hit Response", exit:"EXIT", start:"TAP TO START", over:"GAME OVER"}
-        };
-        const L = lang[tg.initDataUnsafe?.user?.language_code === 'uz' ? 'uz' : (tg.initDataUnsafe?.user?.language_code === 'ru' ? 'ru' : 'en')];
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        const scrUi = document.getElementById('scr');
+        const msgUi = document.getElementById('msg');
         
-        // Apply texts
-        document.querySelectorAll('[data-key]').forEach(el => el.innerText = L[el.getAttribute('data-key')]);
-        document.getElementById('exit-btn').innerText = L.exit;
+        let w, h, raf, mode, state = 'start', score = 0;
+        let lastTime = 0, dt = 0;
 
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const scoreEl = document.getElementById('score-val');
-        const msgEl = document.getElementById('msg-layer');
-        let gameId, mode = null, score = 0, state = 'menu';
-
-        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        function resize() {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+        }
         window.addEventListener('resize', resize); resize();
 
-        function start(m) {
-            mode = m; state = 'start';
-            document.getElementById('hub').style.display = 'none';
+        function init(m) {
+            mode = m; state = 'start'; score = 0;
+            document.getElementById('menu').style.display = 'none';
             document.getElementById('stage').style.display = 'block';
-            msgEl.innerText = L.start; scoreEl.innerText = '0';
-            if(m === 'flappy') flappyInit();
-            if(m === 'stack') stackInit();
-            if(m === 'knife') knifeInit();
+            msgUi.innerText = "TAP TO START"; scrUi.innerText = "0";
+            
+            if(m === 'flappy') setupFlappy();
+            if(m === 'stack') setupStack();
+            if(m === 'knife') setupKnife();
+            
+            lastTime = performance.now();
+            raf = requestAnimationFrame(loop);
         }
 
-        function closeGame() {
-            cancelAnimationFrame(gameId);
-            document.getElementById('hub').style.display = 'flex';
+        function stop() {
+            cancelAnimationFrame(raf);
+            document.getElementById('menu').style.display = 'flex';
             document.getElementById('stage').style.display = 'none';
-            mode = null;
         }
 
-        function haptic(s) { tg.HapticFeedback.impactOccurred(s); }
-
-        // ==========================================================
-        // 🐦 FLAPPY VELOCITY (Advanced Fluid Physics)
-        // ==========================================================
-        function flappyInit() {
-            let bird = {y: canvas.height/2, v: 0, r: 15, rot: 0};
-            let pipes = [], frame = 0; score = 0;
-            const gravity = 0.5, jump = -8, gap = 180;
-
-            function run() {
-                ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0,0,canvas.width,canvas.height);
-                // Grid Background
-                ctx.strokeStyle = '#111'; ctx.lineWidth = 1;
-                for(let i=0; i<canvas.width; i+=40) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke(); }
-                
-                if(state === 'play') {
-                    bird.v += gravity; bird.y += bird.v;
-                    bird.rot = Math.min(Math.PI/4, Math.max(-Math.PI/4, bird.v * 0.08));
-                    if(frame++ % 90 === 0) pipes.push({x: canvas.width, h: Math.random()*(canvas.height-gap-200)+100, p: false});
-                    
-                    pipes.forEach((p, i) => {
-                        p.x -= 4;
-                        ctx.fillStyle = '#1a1a1a'; ctx.strokeStyle = varColor();
-                        ctx.fillRect(p.x, 0, 60, p.h); ctx.strokeRect(p.x, 0, 60, p.h);
-                        ctx.fillRect(p.x, p.h+gap, 60, canvas.height); ctx.strokeRect(p.x, p.h+gap, 60, canvas.height);
-                        
-                        if(bird.y+bird.r > canvas.height || bird.y-bird.r < 0 || (bird.x+bird.r > p.x && bird.x-bird.r < p.x+60 && (bird.y-bird.r < p.h || bird.y+bird.r > p.h+gap))) {
-                            state = 'over'; haptic('heavy'); msgEl.innerText = L.over;
-                        }
-                        if(p.x+60 < bird.x && !p.p) { score++; scoreEl.innerText = score; p.p = true; haptic('light'); }
-                    });
-                    pipes = pipes.filter(p => p.x > -100);
-                }
-
-                // Draw Bird (Neon Style)
-                ctx.save(); ctx.translate(canvas.width*0.25, bird.y); ctx.rotate(bird.rot);
-                ctx.shadowBlur = 15; ctx.shadowColor = varColor(); ctx.fillStyle = '#fff';
-                ctx.beginPath(); ctx.arc(0,0,bird.r,0,Math.PI*2); ctx.fill();
-                ctx.restore(); ctx.shadowBlur = 0;
-
-                gameId = requestAnimationFrame(run);
-            }
-            canvas.onclick = () => { 
-                if(state === 'start') { state = 'play'; msgEl.innerText = ''; }
-                if(state === 'play') { bird.v = jump; haptic('soft'); }
-                if(state === 'over') flappyInit();
-            };
-            run();
+        function loop(t) {
+            dt = (t - lastTime) / 16.66;
+            lastTime = t;
+            ctx.fillStyle = '#08080a';
+            ctx.fillRect(0,0,w,h);
+            
+            if(mode === 'flappy') updateFlappy(dt);
+            if(mode === 'stack') updateStack(dt);
+            if(mode === 'knife') updateKnife(dt);
+            
+            raf = requestAnimationFrame(loop);
         }
 
-        // ==========================================================
-        // 🧱 PERFECT STACK (Interpolated Camera & Color Lerp)
-        // ==========================================================
-        function stackInit() {
-            let boxes = [], speed = 4, stateStack = 'start'; score = 0;
-            const bH = 35, bW = 160;
-            boxes.push({x: (canvas.width-bW)/2, w: bW, y: canvas.height-100, c: 200});
-            let cur = {x: 0, w: bW, y: canvas.height-100-bH, dir: 1, c: 210};
-
-            function run() {
-                let grad = ctx.createLinearGradient(0,0,0,canvas.height);
-                grad.addColorStop(0, '#050505'); grad.addColorStop(1, `hsl(${(score*10)%360}, 20%, 10%)`);
-                ctx.fillStyle = grad; ctx.fillRect(0,0,canvas.width,canvas.height);
-
-                if(stateStack === 'play') {
-                    cur.x += speed * cur.dir;
-                    if(cur.x > canvas.width-50 || cur.x < -cur.w+50) cur.dir *= -1;
-                }
-
-                let camY = (boxes.length * bH) - canvas.height/2;
-                ctx.save(); ctx.translate(0, camY > 0 ? camY : 0);
+        // --- 🐦 FLAPPY PRO: PHYSICS ENGINE ---
+        let bird, pipes;
+        function setupFlappy() {
+            bird = { y: h/2, v: 0, r: 18, targetRot: 0, curRot: 0 };
+            pipes = [];
+        }
+        function updateFlappy(dt) {
+            if(state === 'play') {
+                bird.v += 0.5 * dt; bird.y += bird.v * dt;
+                bird.targetRot = Math.min(Math.PI/4, Math.max(-Math.PI/4, bird.v * 0.1));
+                bird.curRot += (bird.targetRot - bird.curRot) * 0.2;
                 
-                boxes.forEach(b => {
-                    ctx.fillStyle = `hsl(${b.c}, 70%, 50%)`;
-                    ctx.fillRect(b.x, b.y, b.w, b.h);
-                    ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.strokeRect(b.x, b.y, b.w, b.h);
+                if(Math.floor(lastTime/1500) !== Math.floor((lastTime-16)/1500)) {
+                    let gap = 170;
+                    let hh = Math.random()*(h-gap-200)+100;
+                    pipes.push({x: w, h: hh, gap: gap, p: false});
+                }
+                pipes.forEach(p => {
+                    p.x -= 4 * dt;
+                    ctx.fillStyle = '#1a1a20'; ctx.fillRect(p.x, 0, 60, p.h);
+                    ctx.fillRect(p.x, p.h+p.gap, 60, h);
+                    if(bird.x+bird.r > p.x && bird.x-bird.r < p.x+60 && (bird.y-bird.r < p.h || bird.y+bird.r > p.h+p.gap)) die();
+                    if(p.x+60 < w*0.25 && !p.p) { score++; p.p = true; scrUi.innerText = score; tg.HapticFeedback.impactOccurred('light'); }
                 });
-                
-                if(stateStack !== 'over') {
-                    ctx.fillStyle = `hsl(${cur.c}, 70%, 50%)`;
-                    ctx.fillRect(cur.x, cur.y, cur.w, cur.h);
-                }
-                ctx.restore();
-                gameId = requestAnimationFrame(run);
+                pipes = pipes.filter(p => p.x > -100);
+                if(bird.y > h || bird.y < 0) die();
             }
-
-            canvas.onclick = () => {
-                if(stateStack === 'start') { stateStack = 'play'; msgEl.innerText = ''; return; }
-                if(stateStack === 'over') { stackInit(); return; }
-
-                let prev = boxes[boxes.length-1];
-                let diff = cur.x - prev.x;
-                if(Math.abs(diff) >= cur.w) { stateStack = 'over'; haptic('heavy'); msgEl.innerText = L.over; return; }
-
-                let newW = cur.w - Math.abs(diff);
-                let newX = diff > 0 ? cur.x : prev.x;
-                boxes.push({x: newX, w: newW, y: cur.y, c: cur.c});
-                score++; scoreEl.innerText = score; haptic('medium'); speed += 0.1;
-                cur = {x: Math.random()>0.5?0:canvas.width-newW, w: newW, y: cur.y-bH, dir: 1, c: 200+(score*10)};
-            };
-            run();
+            ctx.save(); ctx.translate(w*0.25, bird.y); ctx.rotate(bird.curRot);
+            ctx.fillStyle = '#00f2ff'; ctx.beginPath(); ctx.arc(0,0,bird.r,0,Math.PI*2); ctx.fill();
+            ctx.restore();
         }
 
-        // ==========================================================
-        // 🎯 KNIFE MASTER (Hit Impact & Screen Shake)
-        // ==========================================================
-        function knifeInit() {
-            let log = {a: 0, v: 0.03, knives: [], shake: 0}; score = 0;
-            let currentKnifeY = canvas.height-150, isFiring = false;
+        // --- 🧱 PERFECT STACK: TIMING ENGINE ---
+        let blocks, curB, stackDir, stackSpeed;
+        function setupStack() {
+            blocks = [{x: (w-150)/2, y: h-100, w: 150, c: 200}];
+            curB = {x: 0, y: h-135, w: 150, dir: 1, c: 210};
+            stackSpeed = 5;
+        }
+        function updateStack(dt) {
+            let camY = Math.max(0, (blocks.length * 35) - h/2);
+            ctx.save(); ctx.translate(0, camY);
+            blocks.forEach(b => {
+                ctx.fillStyle = `hsl(${b.c}, 70%, 50%)`; ctx.fillRect(b.x, b.y, b.w, 35);
+            });
+            if(state === 'play') {
+                curB.x += stackSpeed * curB.dir * dt;
+                if(curB.x > w-curB.w || curB.x < 0) curB.dir *= -1;
+                ctx.fillStyle = `hsl(${curB.c}, 70%, 50%)`; ctx.fillRect(curB.x, curB.y, curB.w, 35);
+            }
+            ctx.restore();
+        }
 
-            function run() {
-                ctx.fillStyle = '#050505'; ctx.fillRect(0,0,canvas.width,canvas.height);
-                
-                // Shake effect logic
-                if(log.shake > 0) { ctx.save(); ctx.translate(Math.random()*log.shake, Math.random()*log.shake); log.shake *= 0.8; }
-
-                log.a += log.v;
-                // Draw Log
-                ctx.save(); ctx.translate(canvas.width/2, 250); ctx.rotate(log.a);
-                ctx.fillStyle = '#111'; ctx.strokeStyle = varColor(); ctx.lineWidth=4;
-                ctx.beginPath(); ctx.arc(0,0,90,0,Math.PI*2); ctx.fill(); ctx.stroke();
-                
-                log.knives.forEach(angle => {
-                    ctx.save(); ctx.rotate(angle);
-                    ctx.fillStyle = '#fff'; ctx.fillRect(-3, 80, 6, 60);
-                    ctx.restore();
-                });
-                ctx.restore();
-
-                // Draw Firing Knife
-                ctx.fillStyle = '#fff'; ctx.fillRect(canvas.width/2-3, currentKnifeY, 6, 60);
-                
-                if(isFiring) {
-                    currentKnifeY -= 35;
-                    if(currentKnifeY <= 340) {
-                        let hitAngle = (Math.PI/2 - log.a) % (Math.PI*2);
-                        if(hitAngle < 0) hitAngle += Math.PI*2;
-                        
-                        if(log.knives.some(a => Math.abs(a - hitAngle) < 0.2)) {
-                            state = 'over'; haptic('heavy'); msgEl.innerText = L.over; isFiring = false;
-                        } else {
-                            log.knives.push(hitAngle); score++; scoreEl.innerText = score;
-                            haptic('medium'); log.shake = 10; isFiring = false; currentKnifeY = canvas.height-150;
-                            log.v += 0.002;
-                        }
+        // --- 🎯 KNIFE HIT: PRECISION ENGINE ---
+        let log, kFire, kActiveY;
+        function setupKnife() {
+            log = { rot: 0, v: 0.04, knives: [], shake: 0 };
+            kFire = false; kActiveY = h-150;
+        }
+        function updateKnife(dt) {
+            if(log.shake > 0) { ctx.save(); ctx.translate(Math.random()*log.shake-log.shake/2, 0); log.shake *= 0.9; }
+            log.rot += log.v * dt;
+            ctx.save(); ctx.translate(w/2, 200); ctx.rotate(log.rot);
+            ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(0,0,80,0,Math.PI*2); ctx.fill();
+            log.knives.forEach(a => {
+                ctx.save(); ctx.rotate(a); ctx.fillStyle = '#fff'; ctx.fillRect(-4, 70, 8, 50); ctx.restore();
+            });
+            ctx.restore();
+            if(!kFire) { ctx.fillStyle = '#fff'; ctx.fillRect(w/2-4, h-150, 8, 60); }
+            else {
+                kActiveY -= 25 * dt; ctx.fillStyle = '#fff'; ctx.fillRect(w/2-4, kActiveY, 8, 60);
+                if(kActiveY < 280) {
+                    let hitA = (Math.PI/2 - log.rot) % (Math.PI*2);
+                    if(hitA < 0) hitA += Math.PI*2;
+                    if(log.knives.some(a => Math.abs(a - hitA) < 0.25)) die();
+                    else {
+                        log.knives.push(hitA); score++; scrUi.innerText = score;
+                        kFire = false; kActiveY = h-150; log.shake = 8;
+                        tg.HapticFeedback.impactOccurred('medium');
+                        log.v += 0.001;
                     }
                 }
-                if(log.shake > 0) ctx.restore();
-                gameId = requestAnimationFrame(run);
             }
-            canvas.onclick = () => {
-                if(state === 'over') { state = 'play'; log.knives = []; score = 0; log.v = 0.03; scoreEl.innerText = '0'; msgEl.innerText = ''; return; }
-                if(!isFiring && state !== 'over') { isFiring = true; haptic('soft'); msgEl.innerText = ''; }
-            };
-            run();
+            if(log.shake > 0) ctx.restore();
         }
 
-        function varColor() { return `hsl(${(Date.now()/20)%360}, 100%, 50%)`; }
+        function die() {
+            state = 'over'; msgUi.innerText = "GAME OVER";
+            tg.HapticFeedback.notificationOccurred('error');
+        }
+
+        canvas.onmousedown = canvas.ontouchstart = (e) => {
+            if(e.type === 'touchstart') e.preventDefault();
+            if(state === 'over') { init(mode); return; }
+            if(state === 'start') { state = 'play'; msgUi.innerText = ""; }
+            
+            if(mode === 'flappy') bird.v = -8;
+            if(mode === 'knife' && !kFire) { kFire = true; tg.HapticFeedback.impactOccurred('soft'); }
+            if(mode === 'stack') {
+                let prev = blocks[blocks.length-1];
+                let diff = curB.x - prev.x;
+                if(Math.abs(diff) >= curB.w) die();
+                else {
+                    let newW = curB.w - Math.abs(diff);
+                    let newX = diff > 0 ? curB.x : prev.x;
+                    blocks.push({x: newX, y: curB.y, w: newW, c: 200+(score*10)});
+                    score++; scrUi.innerText = score;
+                    curB = {x: Math.random()*(w-newW), y: curB.y-35, w: newW, dir: 1, c: 200+(score*10)};
+                    stackSpeed += 0.1; tg.HapticFeedback.impactOccurred('medium');
+                }
+            }
+        };
     </script>
 </body>
     </html>
