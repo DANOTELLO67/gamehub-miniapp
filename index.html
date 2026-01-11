@@ -1,242 +1,212 @@
 <!DOCTYPE html>
-<html>
+<html lang="uz">
 <head>
-<meta charset="UTF-8">
-<title>GameHub – Flying Cow</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<style>
-body {
-  margin:0;
-  background:#020617;
-  font-family:Arial, sans-serif;
-}
-canvas {
-  display:block;
-  margin:auto;
-}
-button {
-  padding:10px 16px;
-  font-size:14px;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Roblox Uz Platform</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #ffffff;
+            --accent-color: #38bdf8;
+            --button-grad: linear-gradient(90deg, #38bdf8, #818cf8);
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 24px;
+            margin: 0;
+            background: var(--button-grad);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .user-info {
+            font-size: 14px;
+            color: #94a3b8;
+        }
+
+        /* O'yinlar Grid - Roblox stili */
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .game-card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            overflow: hidden;
+            transition: transform 0.2s;
+            border: 1px solid #334155;
+            cursor: pointer;
+        }
+
+        .game-card:active {
+            transform: scale(0.95);
+        }
+
+        .game-thumb {
+            width: 100%;
+            height: 120px;
+            background: #334155;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+        }
+
+        .game-info {
+            padding: 10px;
+            text-align: center;
+        }
+
+        .game-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        /* Action Buttons */
+        .actions {
+            margin-top: 30px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .btn {
+            background: var(--button-grad);
+            border: none;
+            padding: 15px;
+            border-radius: 12px;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 2px solid #334155;
+        }
+
+        #game-stage {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: black;
+            z-index: 1000;
+        }
+
+        .close-game {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 20px;
+            z-index: 1001;
+        }
+    </style>
 </head>
 <body>
 
-<canvas id="game" width="360" height="640"></canvas>
+    <header>
+        <h1 id="platform-name">ROBLOX UZ HUB</h1>
+        <p class="user-info" id="user-welcome">Xush kelibsiz!</p>
+    </header>
 
-<script>
-Telegram.WebApp.ready();
+    <div class="games-grid" id="games-list">
+        <div class="game-card" onclick="startGame('https://wayou.github.io/FlappyBird/')">
+            <div class="game-thumb">🐦</div>
+            <div class="game-info">
+                <div class="game-title">Flappy Bird</div>
+            </div>
+        </div>
 
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+        <div class="game-card" onclick="startGame('https://play2048.co/')">
+            <div class="game-thumb">🔢</div>
+            <div class="game-info">
+                <div class="game-title">2048 Classic</div>
+            </div>
+        </div>
 
-// ================= GLOBAL SCREEN =================
-let screen = "menu"; // menu | game | result | leaderboard | monetization
+        <div class="game-card" onclick="startGame('https://www.towergame.app/')">
+            <div class="game-thumb">🏗️</div>
+            <div class="game-info">
+                <div class="game-title">Tower Builder</div>
+            </div>
+        </div>
+    </div>
 
-// ================= USER =================
-const tgUser = Telegram.WebApp.initDataUnsafe?.user;
-const playerName = tgUser?.first_name || "Player";
-const playerId = tgUser?.id || "local";
+    <div class="actions">
+        <button class="btn" onclick="requestAddGame()">➕ O'z o'yiningni qo'sh</button>
+        <button class="btn btn-secondary" onclick="tg.close()">Yopish</button>
+    </div>
 
-// ================= LEADERBOARD (SERVER READY) =================
-let leaderboard = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+    <div id="game-stage">
+        <button class="close-game" onclick="closeGame()">X</button>
+        <iframe id="game-frame" src="" frameborder="0" style="width:100%; height:100%;"></iframe>
+    </div>
 
-// ================= GAME STATE =================
-let score = 0;
-let bestScore = Number(localStorage.getItem("bestScore")) || 0;
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand(); // WebAppni to'liq ekranga yoyish
 
-// ================= COW (KICHRAYTIRILGAN) =================
-const cow = {
-  x: 80,
-  y: 300,
-  w: 34,
-  h: 34,
-  vy: 0
-};
+        // Foydalanuvchi ismini chiqarish
+        if (tg.initDataUnsafe.user) {
+            document.getElementById('user-welcome').innerText = `Salom, ${tg.initDataUnsafe.user.first_name}! Tayyormisiz?`;
+        }
 
-// ================= PHYSICS =================
-const FIXED_DT = 1/120;
-const GRAVITY = 2200;
-const JUMP = -520;
-const MAX_FALL = 900;
-const DAMPING = 0.995;
+        function startGame(url) {
+            document.getElementById('game-frame').src = url;
+            document.getElementById('game-stage').style.display = 'block';
+        }
 
-let PIPE_SPEED = 160;
-let PIPE_GAP = 150;
-const INPUT_BUFFER = 0.12;
+        function closeGame() {
+            document.getElementById('game-stage').style.display = 'none';
+            document.getElementById('game-frame').src = '';
+        }
 
-let pipes = [];
-let lastTime = 0;
-let acc = 0;
-let inputTimer = 0;
-
-// ================= HELPERS =================
-function randY(){ return Math.random()*260+60; }
-
-function resetGame(){
-  score = 0;
-  cow.y = 300;
-  cow.vy = 0;
-  PIPE_SPEED = 160;
-  PIPE_GAP = 150;
-  pipes = [{ x:360, y:randY(), passed:false }];
-}
-
-// ================= INPUT =================
-canvas.addEventListener("click", handleTap);
-canvas.addEventListener("touchstart", handleTap);
-
-function handleTap(){
-  if(screen==="menu"){ screen="game"; resetGame(); cow.vy=JUMP; return; }
-  if(screen==="game"){ inputTimer = INPUT_BUFFER; return; }
-  if(screen==="result"){ screen="leaderboard"; return; }
-  if(screen==="leaderboard"){ screen="menu"; return; }
-}
-
-// ================= GAME UPDATE =================
-function updateGame(dt){
-  cow.vy += GRAVITY * dt;
-  cow.vy = Math.min(cow.vy, MAX_FALL);
-  cow.vy *= DAMPING;
-  cow.y += cow.vy * dt;
-
-  if(cow.y < 0 || cow.y + cow.h > 640){
-    endGame();
-    return;
-  }
-
-  pipes.forEach(p=>{
-    p.x -= PIPE_SPEED * dt;
-
-    if(!p.passed && p.x + 50 < cow.x){
-      p.passed = true;
-      score++;
-      PIPE_SPEED += 1.2;
-      PIPE_GAP = Math.max(120, PIPE_GAP - 0.7);
-    }
-
-    const hx = cow.x + 4, hy = cow.y + 4;
-    const hw = cow.w - 8, hh = cow.h - 8;
-
-    if(hx < p.x + 50 && hx + hw > p.x &&
-      (hy < p.y || hy + hh > p.y + PIPE_GAP)){
-      endGame();
-    }
-  });
-
-  if(pipes[pipes.length-1].x < 180){
-    pipes.push({ x:360, y:randY(), passed:false });
-  }
-  if(pipes[0].x < -60) pipes.shift();
-}
-
-function endGame(){
-  screen = "result";
-  if(score > bestScore){
-    bestScore = score;
-    localStorage.setItem("bestScore", bestScore);
-  }
-
-  leaderboard.push({ id:playerId, name:playerName, score });
-  leaderboard.sort((a,b)=>b.score-a.score);
-  leaderboard = leaderboard.slice(0,10);
-  localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
-}
-
-// ================= DRAW =================
-function drawBackground(){
-  const g = ctx.createLinearGradient(0,0,0,640);
-  g.addColorStop(0,"#020617");
-  g.addColorStop(1,"#0f172a");
-  ctx.fillStyle = g;
-  ctx.fillRect(0,0,360,640);
-}
-
-function drawCow(){
-  ctx.fillStyle="white";
-  ctx.fillRect(cow.x, cow.y, cow.w, cow.h);
-
-  ctx.fillStyle="black";
-  ctx.fillRect(cow.x+10, cow.y+12, 3, 3);
-  ctx.fillRect(cow.x+21, cow.y+12, 3, 3);
-  ctx.fillRect(cow.x+15, cow.y+21, 4, 2);
-
-  ctx.fillStyle="#F6D365";
-  ctx.beginPath();
-  ctx.moveTo(cow.x+12, cow.y);
-  ctx.lineTo(cow.x+17, cow.y-5);
-  ctx.lineTo(cow.x+22, cow.y);
-  ctx.fill();
-}
-
-function drawPipes(){
-  ctx.fillStyle="#22c55e";
-  pipes.forEach(p=>{
-    ctx.fillRect(p.x,0,50,p.y);
-    ctx.fillRect(p.x,p.y+PIPE_GAP,50,640);
-  });
-}
-
-function drawUI(){
-  ctx.fillStyle="white";
-  ctx.font="18px Arial";
-  ctx.textAlign="left";
-  ctx.fillText("Score: "+score,10,28);
-  ctx.fillText("Best: "+bestScore,10,50);
-
-  ctx.textAlign="center";
-  if(screen==="menu"){
-    ctx.font="26px Arial";
-    ctx.fillText("🐮 Flying Cow",180,260);
-    ctx.font="18px Arial";
-    ctx.fillText("Tap to Play",180,310);
-  }
-  if(screen==="result"){
-    ctx.font="24px Arial";
-    ctx.fillText("Game Over",180,260);
-    ctx.font="18px Arial";
-    ctx.fillText("Score: "+score,180,300);
-    ctx.fillText("Tap to Leaderboard",180,340);
-  }
-  if(screen==="leaderboard"){
-    ctx.font="22px Arial";
-    ctx.fillText("🏆 Leaderboard",180,90);
-    ctx.font="16px Arial";
-    leaderboard.forEach((p,i)=>{
-      ctx.fillText(`${i+1}. ${p.name} – ${p.score}`,180,130+i*26);
-    });
-    ctx.fillText("Tap to Menu",180,520);
-  }
-}
-
-function draw(){
-  drawBackground();
-  if(screen==="game") drawCow(), drawPipes();
-  drawUI();
-}
-
-// ================= LOOP =================
-function loop(t){
-  let dt=(t-lastTime)/1000||0;
-  if(dt>0.25)dt=0.25;
-  lastTime=t;
-  acc+=dt;
-  inputTimer-=dt;
-
-  while(acc>=FIXED_DT){
-    if(screen==="game"){
-      if(inputTimer>0){ cow.vy=JUMP; inputTimer=0; }
-      updateGame(FIXED_DT);
-    }
-    acc-=FIXED_DT;
-  }
-
-  draw();
-  requestAnimationFrame(loop);
-}
-
-requestAnimationFrame(loop);
-</script>
-
+        function requestAddGame() {
+            tg.showPopup({
+                title: 'O\'yin qo\'shish',
+                message: 'O\'z o\'yiningizni platformaga qo\'shmoqchimisiz? Bizga GitHub havolasini yuboring.',
+                buttons: [{type: 'ok', text: 'Tushundim'}]
+            });
+            // Botga ma'lumot yuborish
+            tg.sendData("add_game_request");
+        }
+    </script>
 </body>
-</html>
+  </html>
+  
