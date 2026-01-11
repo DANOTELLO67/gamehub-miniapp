@@ -5,16 +5,8 @@
 <title>Flying Cow</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-  body {
-    margin: 0;
-    background: #0f172a;
-    overflow: hidden;
-  }
-  canvas {
-    display: block;
-    margin: auto;
-    background: #1e293b;
-  }
+  body { margin:0; background:#0f172a; overflow:hidden; }
+  canvas { display:block; margin:auto; background:#1e293b; }
 </style>
 </head>
 <body>
@@ -27,60 +19,95 @@ Telegram.WebApp.ready();
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-let cow = { x: 80, y: 300, w: 40, h: 30, vy: 0 };
-let gravity = 0.5;
-let jump = -8;
-let score = 0;
-let gameOver = false;
+const G = 0.45;          // gravity (yumshoq)
+const JUMP = -8.5;       // sakrash kuchi
+const PIPE_GAP = 150;
+const PIPE_SPEED = 2.2;
 
-let pipes = [{ x: 360, y: 200 }];
+let state = "start";     // start | play | over
+let score = 0;
+
+let cow = { x: 80, y: 300, w: 40, h: 30, vy: 0 };
+let pipes = [];
+
+function resetGame() {
+  score = 0;
+  cow.y = 300;
+  cow.vy = 0;
+  pipes = [{ x: 360, y: randY() }];
+  state = "start";
+}
+
+function randY() {
+  return Math.random() * 260 + 60;
+}
 
 function update() {
-  if (gameOver) return;
+  if (state !== "play") return;
 
-  cow.vy += gravity;
+  cow.vy += G;
   cow.y += cow.vy;
 
-  if (cow.y < 0 || cow.y + cow.h > 640) gameOver = true;
+  if (cow.y < 0 || cow.y + cow.h > 640) state = "over";
 
   pipes.forEach(p => {
-    p.x -= 2;
+    p.x -= PIPE_SPEED;
 
-    if (
+    const hit =
       cow.x < p.x + 50 &&
       cow.x + cow.w > p.x &&
-      (cow.y < p.y || cow.y + cow.h > p.y + 140)
-    ) gameOver = true;
+      (cow.y < p.y || cow.y + cow.h > p.y + PIPE_GAP);
 
-    if (p.x + 50 === cow.x) score++;
+    if (hit) state = "over";
+
+    if (!p.passed && p.x + 50 < cow.x) {
+      p.passed = true;
+      score++;
+    }
   });
 
   if (pipes[pipes.length - 1].x < 180) {
-    pipes.push({ x: 360, y: Math.random() * 300 + 50 });
+    pipes.push({ x: 360, y: randY() });
   }
-
   if (pipes[0].x < -60) pipes.shift();
 }
 
 function draw() {
   ctx.clearRect(0, 0, 360, 640);
 
+  // Cow (placeholder)
   ctx.fillStyle = "white";
   ctx.fillRect(cow.x, cow.y, cow.w, cow.h);
 
+  // Pipes
   ctx.fillStyle = "#22c55e";
   pipes.forEach(p => {
     ctx.fillRect(p.x, 0, 50, p.y);
-    ctx.fillRect(p.x, p.y + 140, 50, 640);
+    ctx.fillRect(p.x, p.y + PIPE_GAP, 50, 640);
   });
 
+  // Score
   ctx.fillStyle = "white";
+  ctx.font = "20px Arial";
   ctx.fillText("Score: " + score, 10, 30);
 
-  if (gameOver) {
-    ctx.fillText("Game Over", 120, 320);
-    ctx.fillText("Tap to restart", 90, 350);
+  // States
+  ctx.font = "24px Arial";
+  ctx.textAlign = "center";
+
+  if (state === "start") {
+    ctx.fillText("🐮 Flying Cow", 180, 280);
+    ctx.font = "18px Arial";
+    ctx.fillText("Tap to Start", 180, 320);
   }
+
+  if (state === "over") {
+    ctx.fillText("Game Over", 180, 300);
+    ctx.font = "18px Arial";
+    ctx.fillText("Tap to restart", 180, 340);
+  }
+
+  ctx.textAlign = "left";
 }
 
 function loop() {
@@ -90,10 +117,12 @@ function loop() {
 }
 
 canvas.addEventListener("touchstart", () => {
-  if (gameOver) location.reload();
-  else cow.vy = jump;
+  if (state === "start") state = "play";
+  else if (state === "play") cow.vy = JUMP;
+  else if (state === "over") resetGame();
 });
 
+resetGame();
 loop();
 </script>
 
