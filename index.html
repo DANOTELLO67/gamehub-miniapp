@@ -1,365 +1,212 @@
 <!DOCTYPE html>
-<html lang="uz">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Eco System V2</title>
+    <title>NEON ECO PRO</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;900&display=swap');
-
-        :root { --main: #00f2ff; --bg: #050508; --gold: #ffd700; --red: #ff0055; }
-        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; outline: none; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
+        body { background: #000; color: #fff; overflow: hidden; height: 100vh; }
         
-        body { 
-            margin: 0; background: var(--bg); font-family: 'Rajdhani', sans-serif; 
-            overflow: hidden; color: #fff; height: 100vh; width: 100vw;
-        }
+        #gameCanvas { display: block; background: #050508; }
 
-        /* LOADING SCREEN */
-        #loader {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 9999; display: flex; 
-            justify-content: center; align-items: center; flex-direction: column;
-        }
-        .spinner {
-            width: 50px; height: 50px; border: 5px solid #333; 
-            border-top: 5px solid var(--main); border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* CANVA */
-        canvas { display: block; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
-
-        /* UI LAYERS */
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        /* INTERFEYS */
+        #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .hud { padding: 20px; display: flex; justify-content: space-between; pointer-events: auto; }
+        .coin-box { background: rgba(255,255,255,0.1); padding: 5px 15px; border-radius: 20px; border: 1px solid #ffd700; color: #ffd700; font-weight: bold; }
         
-        /* HUD */
-        .hud { 
-            position: absolute; top: 15px; left: 15px; right: 15px; 
-            display: flex; justify-content: space-between; align-items: center;
+        /* EKRANLAR */
+        .screen { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.9); display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; pointer-events: auto; z-index: 100;
         }
-        .currency { 
-            background: rgba(0,0,0,0.7); padding: 8px 15px; border-radius: 20px; 
-            border: 1px solid rgba(255,255,255,0.2); pointer-events: auto; display: flex; gap: 8px; align-items: center;
-        }
-        .currency span { color: var(--gold); font-weight: bold; font-size: 18px; }
-        .score-live { font-size: 32px; font-weight: 900; text-shadow: 0 0 10px var(--main); }
-
-        /* MENUS */
-        .screen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(5, 5, 8, 0.95); backdrop-filter: blur(5px);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            pointer-events: auto; transition: 0.3s; z-index: 20;
-            display: none; /* Boshida yashirin, JS ochadi */
-        }
-        
-        h1 { 
-            font-size: 42px; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 2px;
-            background: linear-gradient(to bottom, #fff, var(--main)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        }
-        
         .btn { 
-            background: linear-gradient(90deg, var(--main), #00aaff); border: none; 
-            padding: 15px 60px; margin: 10px; border-radius: 12px; 
-            font-size: 22px; font-weight: 800; color: #000; cursor: pointer;
-            box-shadow: 0 0 25px rgba(0, 242, 255, 0.3);
+            background: #00f2ff; color: #000; border: none; padding: 15px 40px; 
+            border-radius: 10px; font-weight: bold; font-size: 20px; margin: 10px; cursor: pointer;
         }
-        .btn:active { transform: scale(0.95); }
-        .btn-shop { background: transparent; border: 2px solid var(--gold); color: var(--gold); box-shadow: none; }
-
-        /* SHOP */
-        .shop-grid { 
-            display: grid; grid-template-columns: 1fr 1fr; gap: 12px; 
-            width: 90%; max-width: 400px; max-height: 60vh; overflow-y: auto; padding: 10px;
-        }
-        .item-card { 
-            background: rgba(255,255,255,0.05); border: 1px solid #333; border-radius: 12px; 
-            padding: 10px; text-align: center; position: relative;
-        }
-        .item-card.active { border-color: var(--main); background: rgba(0, 242, 255, 0.1); }
-        .preview { width: 40px; height: 40px; border-radius: 50%; margin: 0 auto 5px auto; }
-        .buy-btn { 
-            background: #444; color: #fff; border: none; padding: 6px; width: 100%; 
-            border-radius: 6px; font-weight: bold; margin-top: 5px; font-size: 14px;
-        }
-        .buy-btn.owned { background: var(--main); color: #000; }
         
-        /* ERROR LOG */
-        #error-log {
-            position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(255,0,0,0.8);
-            color: white; font-size: 10px; padding: 5px; display: none; z-index: 10000;
-        }
+        /* SHOP */
+        #shop-screen { display: none; }
+        .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 20px; width: 100%; }
+        .item { background: #111; padding: 10px; border-radius: 10px; text-align: center; border: 1px solid #333; }
+        .item.active { border-color: #00f2ff; }
+        .skin-preview { width: 30px; height: 30px; border-radius: 50%; margin: 0 auto 10px; }
     </style>
 </head>
 <body>
 
-    <div id="loader"><div class="spinner"></div><p style="margin-top:10px;">YUKLANMOQDA...</p></div>
-    <div id="error-log"></div>
-
     <canvas id="gameCanvas"></canvas>
 
-    <div id="ui-layer">
+    <div id="ui">
         <div class="hud">
-            <div class="currency" onclick="openShop()">
-                <span>💰</span> <span id="money-display">0</span>
-            </div>
-            <div class="score-live" id="score-display">0</div>
+            <div class="coin-box">💰 <span id="coins">0</span></div>
+            <div style="font-size: 30px; font-weight: bold;" id="live-score">0</div>
+        </div>
+
+        <div id="main-menu" class="screen">
+            <h1 style="color: #00f2ff; margin-bottom: 10px;">NEON FLY</h1>
+            <p style="margin-bottom: 20px;">BEST: <span id="high-score">0</span></p>
+            <button class="btn" onclick="Game.start()">PLAY</button>
+            <button class="btn" style="background:none; color:#ffd700; border:1px solid #ffd700;" onclick="UI.showShop()">SHOP</button>
+        </div>
+
+        <div id="shop-screen" class="screen">
+            <h2 style="color:#ffd700; margin-bottom: 20px;">MARKET</h2>
+            <div class="shop-grid" id="shop-items"></div>
+            <button class="btn" onclick="UI.hideShop()">BACK</button>
         </div>
     </div>
 
-    <div id="menu" class="screen" style="display: flex;">
-        <h1>NEON FLY</h1>
-        <p style="color:#888; margin-bottom: 20px;">BEST: <span id="best-score">0</span></p>
-        <button class="btn" onclick="startGame()">PLAY</button>
-        <button class="btn btn-shop" onclick="openShop()">SKINS</button>
-    </div>
-
-    <div id="shop" class="screen">
-        <h2 style="color:var(--gold);">MARKET</h2>
-        <div class="shop-grid" id="shop-container"></div>
-        <button class="btn btn-shop" style="margin-top:20px; padding: 10px 40px;" onclick="closeShop()">BACK</button>
-    </div>
-
     <script>
-        // Xatolarni ushlash funksiyasi
-        window.onerror = function(msg, url, line) {
-            const err = document.getElementById('error-log');
-            err.style.display = 'block';
-            err.innerText = "Xato: " + msg + " (Line: " + line + ")";
-            return false;
-        };
-
-        // --- INIT ---
+        // --- ASOSIY O'YIN TIZIMI ---
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        let w, h;
-        
-        // Ekranni to'g'irlash
-        function resize() {
-            w = canvas.width = window.innerWidth;
-            h = canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resize);
-        resize();
-
-        // Telegram tekshiruvi (Crash bermasligi uchun)
         let tg = window.Telegram ? window.Telegram.WebApp : null;
-        if(tg) {
-            tg.expand();
-            tg.ready();
-        }
+        if(tg) tg.expand();
 
-        // --- DATA & SAVE ---
-        const GameData = {
-            money: 0, highScore: 0, equipped: 'def',
-            skins: [
-                { id: 'def', name: 'Neon Blue', price: 0, color: '#00f2ff', owned: true },
-                { id: 'red', name: 'Red Devil', price: 50, color: '#ff0055', owned: false },
-                { id: 'gold', name: 'Gold Pro', price: 200, color: '#ffd700', owned: false },
-                { id: 'green', name: 'Hacker', price: 500, color: '#00ff00', owned: false }
-            ]
+        const Data = {
+            coins: parseInt(localStorage.getItem('coins')) || 0,
+            best: parseInt(localStorage.getItem('best')) || 0,
+            currentSkin: localStorage.getItem('skin') || '#00f2ff',
+            ownedSkins: JSON.parse(localStorage.getItem('owned')) || ['#00f2ff']
         };
 
-        // Load data safely
-        try {
-            const saved = localStorage.getItem('neon_v2');
-            if(saved) {
-                const parsed = JSON.parse(saved);
-                GameData.money = parsed.money || 0;
-                GameData.highScore = parsed.highScore || 0;
-                GameData.equipped = parsed.equipped || 'def';
-                if(parsed.skins) {
-                    parsed.skins.forEach(s => {
-                        let local = GameData.skins.find(x => x.id === s.id);
-                        if(local) local.owned = s.owned;
-                    });
-                }
-            }
-        } catch(e) { console.error("Save error", e); }
+        const Game = {
+            state: 'MENU',
+            score: 0,
+            bird: { x: 50, y: 0, v: 0, r: 12 },
+            pipes: [],
+            frame: 0,
 
-        function saveGame() {
-            localStorage.setItem('neon_v2', JSON.stringify(GameData));
-            updateUI();
-        }
+            init() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                UI.update();
+                this.renderMenu();
+            },
 
-        // --- GAME VARIABLES ---
-        let raf;
-        let state = 'MENU';
-        let frame = 0, score = 0;
-        let bird = { x: 50, y: h/2, v: 0, r: 15 };
-        let pipes = [];
-        let particles = [];
+            start() {
+                this.state = 'PLAY';
+                this.score = 0;
+                this.bird.y = canvas.height / 2;
+                this.bird.v = 0;
+                this.pipes = [];
+                document.getElementById('main-menu').style.display = 'none';
+                this.loop();
+            },
 
-        // --- FUNCTIONS ---
-        function startGame() {
-            state = 'PLAY';
-            document.getElementById('menu').style.display = 'none';
-            document.getElementById('shop').style.display = 'none';
-            
-            // Reset Game
-            bird.y = h/2; bird.v = 0;
-            pipes = []; particles = []; score = 0; frame = 0;
-            document.getElementById('score-display').innerText = '0';
-            
-            loop();
-        }
+            loop() {
+                if (this.state !== 'PLAY') return;
 
-        function loop() {
-            if(state !== 'PLAY') return;
+                // Fizika
+                this.bird.v += 0.5;
+                this.bird.y += this.bird.v;
 
-            // Clear
-            ctx.fillStyle = '#050508';
-            ctx.fillRect(0, 0, w, h);
-
-            // Get Color
-            let skin = GameData.skins.find(s => s.id === GameData.equipped);
-            let color = skin ? skin.color : '#fff';
-
-            // Physics
-            bird.v += 0.45; 
-            bird.y += bird.v;
-
-            // Particles update
-            if(frame % 5 === 0) particles.push({x: bird.x-5, y: bird.y, r: Math.random()*4, a: 1});
-            particles.forEach((p, i) => {
-                p.x -= 2; p.a -= 0.05;
-                ctx.globalAlpha = Math.max(0, p.a);
-                ctx.fillStyle = color;
-                ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
-                if(p.a <= 0) particles.splice(i, 1);
-            });
-            ctx.globalAlpha = 1;
-
-            // Draw Bird
-            ctx.shadowBlur = 15; ctx.shadowColor = color;
-            ctx.fillStyle = color;
-            ctx.beginPath(); ctx.arc(bird.x, bird.y, bird.r, 0, Math.PI*2); ctx.fill();
-            ctx.shadowBlur = 0;
-
-            // Pipes Logic
-            if(frame % 110 === 0) {
-                let gap = 170;
-                let top = Math.random() * (h - gap - 100) + 50;
-                pipes.push({x: w, top: top, gap: gap, passed: false});
-            }
-
-            pipes.forEach((p, i) => {
-                p.x -= 3.5;
-                ctx.fillStyle = '#1a1a1a';
-                ctx.strokeStyle = color;
-                ctx.lineWidth = 2;
-
-                // Top Pipe
-                ctx.fillRect(p.x, 0, 55, p.top);
-                ctx.strokeRect(p.x, 0, 55, p.top);
-                // Bottom Pipe
-                ctx.fillRect(p.x, p.top + p.gap, 55, h);
-                ctx.strokeRect(p.x, p.top + p.gap, 55, h);
-
-                // Collision
-                if(bird.x+bird.r > p.x && bird.x-bird.r < p.x+55) {
-                    if(bird.y-bird.r < p.top || bird.y+bird.r > p.top+p.gap) gameOver();
-                }
-                
-                // Score
-                if(p.x + 55 < bird.x && !p.passed) {
-                    score++; p.passed = true;
-                    document.getElementById('score-display').innerText = score;
-                    if(tg) tg.HapticFeedback.impactOccurred('light');
-                }
-            });
-
-            if(pipes.length > 0 && pipes[0].x < -60) pipes.shift();
-            if(bird.y > h || bird.y < 0) gameOver();
-
-            frame++;
-            raf = requestAnimationFrame(loop);
-        }
-
-        function gameOver() {
-            state = 'MENU';
-            cancelAnimationFrame(raf);
-            
-            GameData.money += score;
-            if(score > GameData.highScore) GameData.highScore = score;
-            saveGame();
-            
-            if(tg) tg.HapticFeedback.notificationOccurred('error');
-            document.getElementById('menu').style.display = 'flex';
-        }
-
-        // Input
-        function jump(e) {
-            if(e) e.preventDefault(); 
-            if(state === 'PLAY') {
-                bird.v = -7; 
-                if(tg) tg.HapticFeedback.impactOccurred('soft');
-            }
-        }
-        window.addEventListener('mousedown', jump);
-        window.addEventListener('touchstart', jump, {passive: false});
-
-        // SHOP LOGIC
-        function openShop() { 
-            document.getElementById('shop').style.display = 'flex'; 
-            renderShop();
-        }
-        function closeShop() { document.getElementById('shop').style.display = 'none'; }
-        
-        function renderShop() {
-            const con = document.getElementById('shop-container');
-            con.innerHTML = '';
-            GameData.skins.forEach(s => {
-                let div = document.createElement('div');
-                div.className = `item-card ${GameData.equipped === s.id ? 'active' : ''}`;
-                
-                let btnTxt = `${s.price} 💰`;
-                let click = `buy('${s.id}')`;
-                let cls = 'buy-btn';
-                
-                if(s.owned) {
-                    if(GameData.equipped === s.id) { btnTxt = "ACTIVE"; cls += " owned"; click = ""; }
-                    else { btnTxt = "EQUIP"; cls += " owned"; click = `equip('${s.id}')`; }
+                if (this.frame++ % 100 === 0) {
+                    let gap = 160;
+                    let top = Math.random() * (canvas.height - gap - 100) + 50;
+                    this.pipes.push({ x: canvas.width, t: top, g: gap, p: false });
                 }
 
-                div.innerHTML = `
-                    <div class="preview" style="background:${s.color}; box-shadow:0 0 10px ${s.color}"></div>
-                    <div style="font-size:12px; font-weight:bold;">${s.name}</div>
-                    <button class="${cls}" onclick="${click}">${btnTxt}</button>
-                `;
-                con.appendChild(div);
-            });
-        }
-        
-        // Global functions for HTML onclick
-        window.buy = function(id) {
-            let s = GameData.skins.find(x => x.id === id);
-            if(GameData.money >= s.price) {
-                GameData.money -= s.price;
-                s.owned = true;
-                equip(id);
-            } else {
-                alert("Pul yetmayapti!");
+                // Chizish
+                ctx.fillStyle = '#050508';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.fillStyle = Data.currentSkin;
+                ctx.beginPath(); ctx.arc(this.bird.x, this.bird.y, this.bird.r, 0, Math.PI * 2); ctx.fill();
+
+                this.pipes.forEach((p, i) => {
+                    p.x -= 3;
+                    ctx.fillStyle = '#1a1a1a';
+                    ctx.strokeStyle = Data.currentSkin;
+                    ctx.lineWidth = 2;
+                    ctx.fillRect(p.x, 0, 50, p.t); ctx.strokeRect(p.x, 0, 50, p.t);
+                    ctx.fillRect(p.x, p.t + p.g, 50, canvas.height); ctx.strokeRect(p.x, p.t + p.g, 50, canvas.height);
+
+                    // Collision
+                    if (this.bird.x + this.bird.r > p.x && this.bird.x - this.bird.r < p.x + 50) {
+                        if (this.bird.y - this.bird.r < p.t || this.bird.y + this.bird.r > p.t + p.g) this.over();
+                    }
+                    if (p.x + 50 < this.bird.x && !p.p) {
+                        this.score++; p.p = true;
+                        document.getElementById('live-score').innerText = this.score;
+                        if(tg) tg.HapticFeedback.impactOccurred('light');
+                    }
+                });
+
+                if (this.pipes.length > 0 && this.pipes[0].x < -60) this.pipes.shift();
+                if (this.bird.y > canvas.height || this.bird.y < 0) this.over();
+
+                requestAnimationFrame(() => this.loop());
+            },
+
+            over() {
+                this.state = 'MENU';
+                Data.coins += this.score;
+                if (this.score > Data.best) Data.best = this.score;
+                localStorage.setItem('coins', Data.coins);
+                localStorage.setItem('best', Data.best);
+                UI.update();
+                document.getElementById('main-menu').style.display = 'flex';
+                if(tg) tg.HapticFeedback.notificationOccurred('error');
             }
         };
-        window.equip = function(id) {
-            GameData.equipped = id;
-            saveGame();
-            renderShop();
-        };
-        
-        // Update UI initially
-        updateUI();
-        function updateUI() {
-            document.getElementById('money-display').innerText = GameData.money;
-            document.getElementById('best-score').innerText = GameData.highScore;
-        }
 
-        // Remove Loader
-        window.onload = () => { document.getElementById('loader').style.display = 'none'; };
+        const UI = {
+            update() {
+                document.getElementById('coins').innerText = Data.coins;
+                document.getElementById('high-score').innerText = Data.best;
+                document.getElementById('live-score').innerText = '0';
+            },
+            showShop() {
+                const shop = document.getElementById('shop-items');
+                shop.innerHTML = '';
+                const skins = [
+                    {c: '#00f2ff', p: 0}, {c: '#ff0055', p: 50}, 
+                    {c: '#ffd700', p: 150}, {c: '#00ff00', p: 300}
+                ];
+                skins.forEach(s => {
+                    let owned = Data.ownedSkins.includes(s.c);
+                    let active = Data.currentSkin === s.c;
+                    shop.innerHTML += `
+                        <div class="item ${active ? 'active' : ''}">
+                            <div class="skin-preview" style="background:${s.c}"></div>
+                            <button onclick="UI.buy('${s.c}', ${s.p})" style="width:100%; font-size:10px;">
+                                ${active ? 'ACTIVE' : (owned ? 'EQUIP' : s.p + ' 💰')}
+                            </button>
+                        </div>
+                    `;
+                });
+                document.getElementById('shop-screen').style.display = 'flex';
+            },
+            hideShop() { document.getElementById('shop-screen').style.display = 'none'; },
+            buy(color, price) {
+                if (Data.ownedSkins.includes(color)) {
+                    Data.currentSkin = color;
+                } else if (Data.coins >= price) {
+                    Data.coins -= price;
+                    Data.ownedSkins.push(color);
+                    Data.currentSkin = color;
+                } else {
+                    alert("Pul yetmayapti!");
+                    return;
+                }
+                localStorage.setItem('skin', Data.currentSkin);
+                localStorage.setItem('coins', Data.coins);
+                localStorage.setItem('owned', JSON.stringify(Data.ownedSkins));
+                this.update(); this.showShop();
+            }
+        };
+
+        // Boshqaruv
+        const action = () => { if(Game.state === 'PLAY') Game.bird.v = -8; };
+        window.addEventListener('mousedown', action);
+        window.addEventListener('touchstart', (e) => { e.preventDefault(); action(); }, {passive: false});
+
+        window.onload = () => Game.init();
+        window.onresize = () => Game.init();
 
     </script>
 </body>
