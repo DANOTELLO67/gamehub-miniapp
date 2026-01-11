@@ -5,422 +5,521 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Roblox Uz Hub</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
-            --text-color: #ffffff;
-            --accent-color: #38bdf8;
-            --btn-grad: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            --bg-dark: #121212;
+            --card-bg: #1e1e1e;
+            --accent: #6C5DD3;
+            --text: #ffffff;
         }
-
         body {
-            font-family: 'Poppins', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
             margin: 0;
             padding: 0;
-            overflow: hidden; /* O'yin payti skroll bo'lmasligi uchun */
+            font-family: 'Fredoka', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            overflow: hidden;
             height: 100vh;
-            display: flex;
-            flex-direction: column;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
-        /* --- HUB (Menyu) Qismi --- */
-        #hub-container {
-            padding: 20px;
-            flex: 1;
-            overflow-y: auto;
+        /* --- MENYU (HUB) --- */
+        #hub {
             display: flex;
             flex-direction: column;
             align-items: center;
+            padding: 20px;
+            height: 100%;
+            box-sizing: border-box;
+            transition: opacity 0.3s;
         }
-
-        header h1 {
-            font-size: 26px;
+        
+        h1 {
             margin: 10px 0;
-            background: var(--btn-grad);
+            background: linear-gradient(45deg, #FF512F, #DD2476);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            text-align: center;
+            font-size: 28px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        .user-info {
-            text-align: center;
-            color: #94a3b8;
-            margin-bottom: 25px;
-            font-size: 14px;
-        }
-
-        .games-grid {
+        .grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: 1fr 1fr;
             gap: 15px;
             width: 100%;
             max-width: 400px;
+            margin-top: 20px;
         }
 
-        .game-card {
+        .card {
             background: var(--card-bg);
-            border-radius: 16px;
-            padding: 15px;
+            border-radius: 20px;
+            padding: 20px;
             text-align: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            border: 1px solid #334155;
-            transition: transform 0.1s;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            border: 2px solid #2d2d2d;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             cursor: pointer;
+            position: relative;
+            overflow: hidden;
         }
 
-        .game-card:active {
+        .card:active {
             transform: scale(0.95);
+            border-color: var(--accent);
         }
 
-        .game-icon {
-            font-size: 40px;
-            margin-bottom: 10px;
-            display: block;
-        }
+        .card-icon { font-size: 40px; margin-bottom: 10px; display: block; }
+        .card-title { font-size: 16px; font-weight: 600; }
+        .card-desc { font-size: 10px; color: #888; margin-top: 5px; }
 
-        .game-title {
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .add-btn {
-            margin-top: 30px;
-            background: var(--btn-grad);
-            color: white;
+        .btn-add {
+            margin-top: auto;
+            background: #2d2d2d;
+            color: #fff;
             border: none;
-            padding: 15px 30px;
-            border-radius: 12px;
-            font-weight: bold;
+            padding: 15px 40px;
+            border-radius: 15px;
+            font-size: 16px;
             width: 100%;
             max-width: 400px;
-            font-size: 16px;
-            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
 
-        /* --- O'YIN QISMI (Oyna) --- */
-        #game-container {
-            display: none; /* Boshida yashirin */
+        /* --- O'YIN EKRANI --- */
+        #game-stage {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             background: #000;
+            display: none;
+            z-index: 999;
+        }
+
+        canvas { display: block; width: 100%; height: 100%; }
+
+        .overlay-ui {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            width: 100%;
+            pointer-events: none;
+            display: flex;
+            justify-content: center;
             z-index: 1000;
         }
 
-        #game-header {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 1001;
+        .score-box {
+            font-size: 48px;
+            font-weight: 600;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
 
         .back-btn {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: bold;
-            backdrop-filter: blur(5px);
-        }
-
-        /* Iframe (Tashqi o'yinlar uchun) */
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-
-        /* --- LOCAL FLAPPY BIRD (Canvas) --- */
-        #flappy-canvas {
-            display: none;
-            width: 100%;
-            height: 100%;
-            background: #70c5ce; /* Osmon rangi */
-        }
-        
-        #flappy-score {
             position: absolute;
-            top: 20%;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 50px;
-            font-weight: bold;
+            top: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.2);
+            border: none;
             color: white;
-            z-index: 1002;
-            display: none;
-            text-shadow: 2px 2px 0 #000;
+            padding: 8px 12px;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+            pointer-events: auto;
+            font-weight: 600;
+            z-index: 1001;
         }
 
-        #start-msg {
+        .tap-msg {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             color: white;
             font-size: 20px;
-            font-weight: bold;
+            opacity: 0.8;
+            animation: pulse 1.5s infinite;
             text-align: center;
-            display: none;
-            z-index: 1002;
-            text-shadow: 1px 1px 0 #000;
+            width: 100%;
         }
+
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+
     </style>
 </head>
 <body>
 
-    <div id="hub-container">
+    <div id="hub">
         <header>
-            <h1>ROBLOX UZ HUB</h1>
-            <div class="user-info" id="username-display">Salom, Gamer!</div>
+            <h1>Roblox Uz</h1>
+            <div style="font-size: 12px; color: #666;" id="username">Foydalanuvchi</div>
         </header>
 
-        <div class="games-grid">
-            <div class="game-card" onclick="playLocalFlappy()">
-                <span class="game-icon">🐦</span>
-                <div class="game-title">Flappy Bird (Tezkor)</div>
+        <div class="grid">
+            <div class="card" onclick="startGame('flappy')">
+                <span class="card-icon">🐦</span>
+                <div class="card-title">Flappy Original</div>
+                <div class="card-desc">Ideal fizika</div>
             </div>
-
-            <div class="game-card" onclick="playIframe('https://iamkun.github.io/tower_game/')">
-                <span class="game-icon">🏗️</span>
-                <div class="game-title">Tower Builder</div>
+            <div class="card" onclick="startGame('stack')">
+                <span class="card-icon">🧱</span>
+                <div class="card-title">Perfect Stack</div>
+                <div class="card-desc">Silliq animatsiya</div>
             </div>
-
-            <div class="game-card" onclick="playIframe('https://gabrielecirulli.github.io/2048/')">
-                <span class="game-icon">🔢</span>
-                <div class="game-title">2048 Classic</div>
-            </div>
-
-            <div class="game-card" onclick="playIframe('https://hextris.io/')">
-                <span class="game-icon">🛑</span>
-                <div class="game-title">Hextris</div>
+            <div class="card" onclick="alert('Tez orada qo\'shiladi!')">
+                <span class="card-icon">🔥</span>
+                <div class="card-title">Tez kunda...</div>
             </div>
         </div>
 
-        <button class="add-btn" onclick="addGamePopup()">➕ O'z o'yiningni qo'sh</button>
+        <button class="btn-add" onclick="window.Telegram.WebApp.showPopup({message: 'Botga o\'yin silkasini yuboring!'})">
+            ➕ O'yin qo'shish
+        </button>
     </div>
 
-    <div id="game-container">
-        <div id="game-header">
-            <button class="back-btn" onclick="closeGame()">🏠 Chiqish</button>
+    <div id="game-stage">
+        <button class="back-btn" onclick="exitGame()">🏠 Chiqish</button>
+        <div class="overlay-ui">
+            <div class="score-box" id="score">0</div>
         </div>
-        
-        <iframe id="game-frame"></iframe>
-
-        <canvas id="flappy-canvas"></canvas>
-        <div id="flappy-score">0</div>
-        <div id="start-msg">O'ynash uchun bosing!</div>
+        <div class="tap-msg" id="msg">Boshlash uchun bosing</div>
+        <canvas id="canvas"></canvas>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
-        
-        // Foydalanuvchi ismini chiqarish
-        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-            document.getElementById('username-display').innerText = 
-                `Salom, ${tg.initDataUnsafe.user.first_name}! Tayyormisiz?`;
+        tg.enableClosingConfirmation();
+
+        if(tg.initDataUnsafe?.user?.first_name) {
+            document.getElementById('username').innerText = "Salom, " + tg.initDataUnsafe.user.first_name;
         }
 
-        // Elementlar
-        const hub = document.getElementById('hub-container');
-        const gameContainer = document.getElementById('game-container');
-        const iframe = document.getElementById('game-frame');
-        const canvas = document.getElementById('flappy-canvas');
-        const scoreEl = document.getElementById('flappy-score');
-        const startMsg = document.getElementById('start-msg');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const msgEl = document.getElementById('msg');
+        let animationId;
+        let currentGame = null;
 
-        // --- FUNKSIYALAR ---
-
-        function closeGame() {
-            // O'yinni yopish va Hubga qaytish
-            gameContainer.style.display = 'none';
-            hub.style.display = 'flex';
-            iframe.src = ''; // Iframe tozalash
-            iframe.style.display = 'none';
-            canvas.style.display = 'none';
-            scoreEl.style.display = 'none';
-            startMsg.style.display = 'none';
-            gameRunning = false; // Flappy to'xtatish
-        }
-
-        // Iframe o'yinlarni ochish (Tower, 2048)
-        function playIframe(url) {
-            hub.style.display = 'none';
-            gameContainer.style.display = 'block';
-            iframe.style.display = 'block';
-            iframe.src = url;
-        }
-
-        function addGamePopup() {
-            tg.showPopup({
-                title: 'O\'yin yaratish',
-                message: 'O\'z o\'yiningizni GitHub-ga yuklang va linkini botga yuboring. Tez orada bu funksiya ishga tushadi!',
-                buttons: [{type: 'ok'}]
-            });
-        }
-
-        // --- FLAPPY BIRD ENGINE (JavaScript ichida) ---
-        // Bu qism tashqi saytga bog'lanmagan, shuning uchun juda silliq ishlaydi.
-        
-        let ctx;
-        let gameRunning = false;
-        let bird, pipes, score, frame;
-        
-        function playLocalFlappy() {
-            hub.style.display = 'none';
-            gameContainer.style.display = 'block';
-            canvas.style.display = 'block';
-            scoreEl.style.display = 'block';
-            startMsg.style.display = 'block';
-
-            // Canvasni to'g'irlash
+        // Ekranni moslash
+        function resize() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            ctx = canvas.getContext('2d');
+        }
+        window.addEventListener('resize', resize);
+        resize();
 
-            resetGame();
-            
-            // Boshlashni kutish
-            canvas.addEventListener('click', inputHandler);
-            canvas.addEventListener('touchstart', inputHandler);
-            draw();
+        function exitGame() {
+            cancelAnimationFrame(animationId);
+            document.getElementById('game-stage').style.display = 'none';
+            document.getElementById('hub').style.display = 'flex';
+            currentGame = null;
         }
 
-        function inputHandler(e) {
-            if (e.type === 'touchstart') e.preventDefault(); // Skrollni bloklash
+        function startGame(type) {
+            document.getElementById('hub').style.display = 'none';
+            document.getElementById('game-stage').style.display = 'block';
+            scoreEl.innerText = '0';
+            msgEl.style.display = 'block';
+            msgEl.innerText = "Boshlash uchun bosing";
             
-            if (!gameRunning) {
-                gameRunning = true;
-                startMsg.style.display = 'none';
-                loop();
-                bird.velocity = -8;
-            } else {
-                bird.velocity = -8; // Sakrash kuchi
-            }
+            if (type === 'flappy') initFlappy();
+            if (type === 'stack') initStack();
         }
 
-        function resetGame() {
-            bird = { x: 50, y: canvas.height / 2, width: 30, height: 30, velocity: 0, gravity: 0.5 };
-            pipes = [];
-            score = 0;
-            frame = 0;
-            scoreEl.innerText = score;
-            startMsg.innerText = "Boshlash uchun bosing!";
-            startMsg.style.display = 'block';
-        }
-
-        function loop() {
-            if (!gameRunning) return;
+        // --- 1. O'YIN: FLAPPY BIRD PRO (Mukammal Fizika) ---
+        function initFlappy() {
+            currentGame = 'flappy';
+            let bird = { x: 50, y: canvas.height/2, v: 0, r: 15 };
+            let pipes = [];
+            let score = 0;
+            let state = 'start'; // start, play, over
+            let frame = 0;
             
-            update();
-            draw();
-            requestAnimationFrame(loop);
-        }
+            // Fizika konstantalari (Originalga yaqin)
+            const GRAVITY = 0.4; // Og'irlik
+            const JUMP = -7;     // Sakrash kuchi
+            const GAP = 160;     // Quvur teshigi
+            const SPEED = 3.5;   // Tezlik
 
-        function update() {
-            frame++;
-            
-            // Qush fizikasi
-            bird.velocity += bird.gravity;
-            bird.y += bird.velocity;
+            function loop() {
+                if(currentGame !== 'flappy') return;
+                
+                // Orqa fon (Osmon)
+                ctx.fillStyle = '#70c5ce';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Yerga yoki shiftga urilish
-            if (bird.y + bird.height > canvas.height || bird.y < 0) {
-                gameOver();
-            }
+                if (state === 'play') {
+                    bird.v += GRAVITY;
+                    bird.y += bird.v;
+                    
+                    // Qushning burilishi (Fizika asosi)
+                    let rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, (bird.v * 0.1)));
+                    
+                    drawBird(bird.x, bird.y, rotation);
+                    
+                    // Quvurlar
+                    if (frame % 90 === 0) {
+                        let topH = Math.random() * (canvas.height - GAP - 100) + 50;
+                        pipes.push({ x: canvas.width, top: topH, passed: false });
+                    }
 
-            // Quvurlar qo'shish
-            if (frame % 100 === 0) {
-                let gap = 150; // Quvur oralig'i
-                let pipeHeight = Math.floor(Math.random() * (canvas.height - gap - 100)) + 50;
-                pipes.push({
-                    x: canvas.width,
-                    y: 0,
-                    width: 50,
-                    height: pipeHeight,
-                    type: 'top'
-                });
-                pipes.push({
-                    x: canvas.width,
-                    y: pipeHeight + gap,
-                    width: 50,
-                    height: canvas.height - pipeHeight - gap,
-                    type: 'bottom'
-                });
-            }
+                    pipes.forEach((p, i) => {
+                        p.x -= SPEED;
+                        
+                        // Chizish
+                        ctx.fillStyle = '#73bf2e';
+                        ctx.fillRect(p.x, 0, 52, p.top); // Tepasi
+                        ctx.fillRect(p.x, p.top + GAP, 52, canvas.height - p.top - GAP); // Pasti
+                        
+                        // Qirrasi
+                        ctx.strokeStyle = '#558c22';
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(p.x, 0, 52, p.top);
+                        ctx.strokeRect(p.x, p.top + GAP, 52, canvas.height - p.top - GAP);
 
-            // Quvurlarni harakatlantirish va o'chirish
-            pipes.forEach((pipe, index) => {
-                pipe.x -= 3; // Tezlik
+                        // To'qnashuv
+                        if (
+                            bird.x + bird.r > p.x && bird.x - bird.r < p.x + 52 &&
+                            (bird.y - bird.r < p.top || bird.y + bird.r > p.top + GAP)
+                        ) {
+                            gameOver();
+                        }
 
-                // To'qnashuvni tekshirish
-                if (
-                    bird.x < pipe.x + pipe.width &&
-                    bird.x + bird.width > pipe.x &&
-                    bird.y < pipe.y + pipe.height &&
-                    bird.y + bird.height > pipe.y
-                ) {
-                    gameOver();
+                        // O'chirish
+                        if (p.x < -60) pipes.shift();
+
+                        // Ochko
+                        if (p.x + 52 < bird.x && !p.passed) {
+                            score++;
+                            scoreEl.innerText = score;
+                            p.passed = true;
+                            tg.HapticFeedback.impactOccurred('light'); // Titrash
+                        }
+                    });
+
+                    // Yerga urilish
+                    if (bird.y + bird.r >= canvas.height) gameOver();
+                    
+                    frame++;
+                } else {
+                    drawBird(bird.x, bird.y, 0);
                 }
 
-                // Ochko hisoblash (faqat bitta quvur o'tganda)
-                if (pipe.x + pipe.width < bird.x && !pipe.passed && pipe.type === 'top') {
+                animationId = requestAnimationFrame(loop);
+            }
+
+            function drawBird(x, y, rot) {
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(rot);
+                // Qush tanasi
+                ctx.fillStyle = '#f4ce42';
+                ctx.beginPath();
+                ctx.arc(0, 0, 15, 0, Math.PI*2);
+                ctx.fill();
+                ctx.stroke();
+                // Ko'z
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(6, -6, 6, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(8, -6, 2, 0, Math.PI*2);
+                ctx.fill();
+                // Tumshuq
+                ctx.fillStyle = '#e86101';
+                ctx.beginPath();
+                ctx.ellipse(8, 4, 8, 5, 0, 0, Math.PI*2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            function gameOver() {
+                state = 'over';
+                tg.HapticFeedback.notificationOccurred('error'); // Kuchli titrash
+                msgEl.innerText = "Yutqazdingiz! Qayta boshlash uchun bosing";
+                msgEl.style.display = 'block';
+            }
+
+            canvas.onclick = () => {
+                if (state === 'start') {
+                    state = 'play';
+                    msgEl.style.display = 'none';
+                    bird.v = JUMP;
+                } else if (state === 'play') {
+                    bird.v = JUMP;
+                } else if (state === 'over') {
+                    initFlappy(); // Reset
+                }
+            };
+            
+            loop();
+        }
+
+        // --- 2. O'YIN: STACK (Tower) PRO ---
+        function initStack() {
+            currentGame = 'stack';
+            let boxes = [];
+            let score = 0;
+            let speed = 3;
+            let state = 'start'; // start, play, over
+            
+            // Asosiy blok
+            const baseSize = 150;
+            let currentBox = {
+                x: (canvas.width - baseSize)/2,
+                y: canvas.height - 100,
+                w: baseSize,
+                h: 25,
+                color: 'hsl(200, 70%, 50%)',
+                dir: 1, // 1: o'ngga, -1: chapga
+                pos: 0 // offset
+            };
+            
+            // Birinchi statik blok
+            boxes.push({ ...currentBox }); 
+            // Harakatlanuvchi blokni yaratish
+            spawnNewBox();
+
+            function spawnNewBox() {
+                let prev = boxes[boxes.length-1];
+                currentBox = {
+                    x: -200, // Chapdan chiqib keladi
+                    y: prev.y - 25,
+                    w: prev.w,
+                    h: 25,
+                    color: `hsl(${200 + (score * 10)}, 70%, 50%)`, // Rang o'zgarishi
+                    dir: 1,
+                    pos: 0
+                };
+            }
+
+            function loop() {
+                if(currentGame !== 'stack') return;
+
+                // Fonni tozalash (Chiroyli gradient)
+                let gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                gradient.addColorStop(0, '#1a2a6c');
+                gradient.addColorStop(1, '#b21f1f');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                if(state === 'play') {
+                    // Harakat
+                    currentBox.x += speed * currentBox.dir;
+                    if(currentBox.x > canvas.width - 50) currentBox.dir = -1;
+                    if(currentBox.x < -50) currentBox.dir = 1;
+                }
+
+                // Kamera effekti (Tower o'sganda pastga tushirish)
+                let offset = Math.max(0, boxes.length * 25 - canvas.height/2);
+
+                ctx.save();
+                ctx.translate(0, offset); // Kamerani siljitish
+
+                // Barcha tushgan bloklarni chizish
+                boxes.forEach(b => {
+                    ctx.fillStyle = b.color;
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = "rgba(0,0,0,0.5)";
+                    ctx.fillRect(b.x, b.y + offset, b.w, b.h);
+                    ctx.shadowBlur = 0;
+                    
+                    // 3D effekt (yon tomoni)
+                    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                    ctx.fillRect(b.x, b.y + offset, b.w, 3);
+                });
+
+                // Hozirgi uchib yurgan blok
+                if(state !== 'over') {
+                    ctx.fillStyle = currentBox.color;
+                    ctx.fillRect(currentBox.x, currentBox.y + offset, currentBox.w, currentBox.h);
+                }
+                
+                ctx.restore();
+
+                animationId = requestAnimationFrame(loop);
+            }
+
+            canvas.onclick = () => {
+                if(state === 'start') {
+                    state = 'play';
+                    msgEl.style.display = 'none';
+                    return;
+                }
+                if(state === 'over') {
+                    initStack();
+                    scoreEl.innerText = 0;
+                    return;
+                }
+
+                // Blokni to'xtatish
+                let prev = boxes[boxes.length-1];
+                let diff = currentBox.x - prev.x;
+                
+                // Agar juda uzoqqa ketib qolsa
+                if(Math.abs(diff) >= currentBox.w) {
+                    gameOver();
+                    return;
+                }
+
+                // Kesish logikasi
+                let cutWidth = currentBox.w - Math.abs(diff);
+                if(cutWidth > 0) {
+                    // Yangi kesilgan blok
+                    let newX = diff > 0 ? currentBox.x : prev.x;
+                    
+                    boxes.push({
+                        x: newX,
+                        y: currentBox.y,
+                        w: cutWidth,
+                        h: currentBox.h,
+                        color: currentBox.color
+                    });
+
                     score++;
                     scoreEl.innerText = score;
-                    pipe.passed = true;
-                    // Haptic (titrash) effekti - Telegram funksiyasi
-                    tg.HapticFeedback.impactOccurred('light');
+                    tg.HapticFeedback.impactOccurred('medium'); // Yaxshi titrash
+                    
+                    // Tezlikni oshirish
+                    speed += 0.1;
+                    
+                    spawnNewBox();
+                    // Yangi blokni oldingi blok ustiga to'g'irlash
+                    currentBox.w = cutWidth;
+                    // Tasodifiy tomondan chiqarish
+                    currentBox.x = Math.random() > 0.5 ? -cutWidth : canvas.width;
+                    
+                } else {
+                    gameOver();
                 }
+            };
 
-                if (pipe.x + pipe.width < 0) {
-                    pipes.splice(index, 1);
-                }
-            });
-        }
+            function gameOver() {
+                state = 'over';
+                tg.HapticFeedback.notificationOccurred('error');
+                msgEl.innerText = "Yutqazdingiz! Qayta boshlash";
+                msgEl.style.display = 'block';
+            }
 
-        function draw() {
-            // Fonni tozalash
-            ctx.fillStyle = '#70c5ce';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Qushni chizish (Sariq kvadrat)
-            ctx.fillStyle = '#fbbf24';
-            ctx.fillRect(bird.x, bird.y, bird.width, bird.height);
-            // Qush chegarasi
-            ctx.strokeStyle = '#fff';
-            ctx.strokeRect(bird.x, bird.y, bird.width, bird.height);
-
-            // Quvurlarni chizish (Yashil)
-            ctx.fillStyle = '#22c55e';
-            pipes.forEach(pipe => {
-                ctx.fillRect(pipe.x, pipe.y, pipe.width, pipe.height);
-                // Quvur qirrasi
-                ctx.strokeStyle = '#14532d';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(pipe.x, pipe.y, pipe.width, pipe.height);
-            });
-        }
-
-        function gameOver() {
-            gameRunning = false;
-            tg.HapticFeedback.notificationOccurred('error'); // Xato titrashi
-            
-            // Natijani yuborish (ixtiyoriy)
-            // tg.sendData(JSON.stringify({game: 'flappy', score: score}));
-
-            alert("O'yin tugadi! Natija: " + score);
-            resetGame();
-            draw();
+            loop();
         }
 
     </script>
 </body>
-                </html>
+    </html>
     
