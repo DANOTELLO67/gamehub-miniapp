@@ -116,46 +116,47 @@ function fixedUpdate(dt) {
 function draw() {
   ctx.clearRect(0,0,360,640);
 
-  // Cow body
+ // ===== COW WITH ROTATION =====
+const angle = Math.max(-0.5, Math.min(0.8, cow.vy * 0.06));
+
+ctx.save();
+ctx.translate(cow.x + cow.w / 2, cow.y + cow.h / 2);
+ctx.rotate(angle);
+
+// Body
 ctx.fillStyle = "white";
-ctx.fillRect(cow.x, cow.y, cow.w, cow.h);
+ctx.fillRect(-cow.w / 2, -cow.h / 2, cow.w, cow.h);
 
 // Eyes
 ctx.fillStyle = "black";
-ctx.fillRect(cow.x + 10, cow.y + 10, 4, 4);
-ctx.fillRect(cow.x + 24, cow.y + 10, 4, 4);
+ctx.fillRect(-10, -5, 4, 4);
+ctx.fillRect(6, -5, 4, 4);
 
-// Mouth (serious 😐)
-ctx.fillRect(cow.x + 16, cow.y + 22, 8, 2);
+// Mouth
+ctx.fillRect(-4, 6, 8, 2);
+
+// Ears
+ctx.fillStyle = "white";
+ctx.fillRect(-cow.w / 2 - 6, -5, 6, 10);
+ctx.fillRect(cow.w / 2, -5, 6, 10);
+
+// Horns
+ctx.fillStyle = "#f5deb3";
+ctx.fillRect(-12, -cow.h / 2 - 6, 6, 6);
+ctx.fillRect(6, -cow.h / 2 - 6, 6, 6);
 
 // Blonde hair
 ctx.fillStyle = "#F6D365";
 ctx.beginPath();
-ctx.moveTo(cow.x + 6, cow.y);
-ctx.lineTo(cow.x + 30, cow.y);
-ctx.lineTo(cow.x + 22, cow.y - 8);
+ctx.moveTo(-cow.w / 2 + 4, -cow.h / 2);
+ctx.lineTo(cow.w / 2 - 4, -cow.h / 2);
+ctx.lineTo(10, -cow.h / 2 - 10);
+ctx.lineTo(-8, -cow.h / 2 - 6);
 ctx.closePath();
 ctx.fill();
 
-// Ears
-ctx.fillStyle = "white";
-ctx.fillRect(cow.x - 6, cow.y + 10, 6, 10);
-ctx.fillRect(cow.x + cow.w, cow.y + 10, 6, 10);
-
-// Horns
-ctx.fillStyle = "#f5deb3";
-ctx.fillRect(cow.x + 6, cow.y - 6, 6, 6);
-ctx.fillRect(cow.x + cow.w - 12, cow.y - 6, 6, 6);
-
-// Bigger blonde hair
-ctx.fillStyle = "#F6D365";
-ctx.beginPath();
-ctx.moveTo(cow.x + 4, cow.y);
-ctx.lineTo(cow.x + cow.w - 4, cow.y);
-ctx.lineTo(cow.x + cow.w - 10, cow.y - 10);
-ctx.lineTo(cow.x + 12, cow.y - 6);
-ctx.closePath();
-ctx.fill();
+ctx.restore();
+// ===== END COW =====
   
   // Pipes
   ctx.fillStyle = "#22c55e";
