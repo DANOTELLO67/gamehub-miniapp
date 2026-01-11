@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Flying Cow</title>
+<meta charset="UTF-8" />
+<title>Flying Cow – Pro Physics</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   body { margin:0; background:#0f172a; overflow:hidden; }
@@ -19,44 +19,83 @@ Telegram.WebApp.ready();
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-const G = 0.45;          // gravity (yumshoq)
-const JUMP = -8.5;       // sakrash kuchi
+// ===== PRO PHYSICS CONSTANTS =====
+const FIXED_DT = 1/120;        // fixed timestep (120 Hz)
+const GRAVITY = 2200;          // px/s^2
+const JUMP_IMPULSE = -520;     // px/s
+const MAX_FALL_SPEED = 900;    // terminal velocity
+const DAMPING = 0.995;         // micro damping (feel)
+const PIPE_SPEED = 160;        // px/s
 const PIPE_GAP = 150;
-const PIPE_SPEED = 2.2;
 
-let state = "start";     // start | play | over
+// Input buffer (forgiving)
+const INPUT_BUFFER = 0.12;     // seconds
+
+// ===== GAME STATE =====
+let state = "start"; // start | play | over
 let score = 0;
 
-let cow = { x: 80, y: 300, w: 40, h: 30, vy: 0 };
+let cow = {
+  x: 80,
+  y: 300,
+  w: 40,
+  h: 30,
+  vy: 0
+};
+
 let pipes = [];
+let lastTime = 0;
+let accumulator = 0;
+let inputTimer = 0;
+
+// ===== HELPERS =====
+function randY() {
+  return Math.random() * 260 + 60;
+}
 
 function resetGame() {
   score = 0;
   cow.y = 300;
   cow.vy = 0;
-  pipes = [{ x: 360, y: randY() }];
+  pipes = [{ x: 360, y: randY(), passed:false }];
   state = "start";
+  inputTimer = 0;
 }
 
-function randY() {
-  return Math.random() * 260 + 60;
+function jump() {
+  cow.vy = JUMP_IMPULSE;
 }
 
-function update() {
+// ===== UPDATE (FIXED) =====
+function fixedUpdate(dt) {
   if (state !== "play") return;
 
-  cow.vy += G;
-  cow.y += cow.vy;
+  // gravity
+  cow.vy += GRAVITY * dt;
+  if (cow.vy > MAX_FALL_SPEED) cow.vy = MAX_FALL_SPEED;
+  cow.vy *= DAMPING;
+  cow.y += cow.vy * dt;
 
-  if (cow.y < 0 || cow.y + cow.h > 640) state = "over";
+  // bounds
+  if (cow.y < 0 || cow.y + cow.h > 640) {
+    state = "over";
+    return;
+  }
 
+  // pipes
   pipes.forEach(p => {
-    p.x -= PIPE_SPEED;
+    p.x -= PIPE_SPEED * dt;
+
+    // forgiving hitbox (slightly smaller cow)
+    const hx = cow.x + 4;
+    const hy = cow.y + 4;
+    const hw = cow.w - 8;
+    const hh = cow.h - 8;
 
     const hit =
-      cow.x < p.x + 50 &&
-      cow.x + cow.w > p.x &&
-      (cow.y < p.y || cow.y + cow.h > p.y + PIPE_GAP);
+      hx < p.x + 50 &&
+      hx + hw > p.x &&
+      (hy < p.y || hy + hh > p.y + PIPE_GAP);
 
     if (hit) state = "over";
 
@@ -66,14 +105,16 @@ function update() {
     }
   });
 
+  // spawn
   if (pipes[pipes.length - 1].x < 180) {
-    pipes.push({ x: 360, y: randY() });
+    pipes.push({ x: 360, y: randY(), passed:false });
   }
   if (pipes[0].x < -60) pipes.shift();
 }
 
+// ===== DRAW =====
 function draw() {
-  ctx.clearRect(0, 0, 360, 640);
+  ctx.clearRect(0,0,360,640);
 
   // Cow (placeholder)
   ctx.fillStyle = "white";
@@ -86,44 +127,65 @@ function draw() {
     ctx.fillRect(p.x, p.y + PIPE_GAP, 50, 640);
   });
 
-  // Score
+  // UI
   ctx.fillStyle = "white";
   ctx.font = "20px Arial";
-  ctx.fillText("Score: " + score, 10, 30);
+  ctx.fillText("Score: " + score, 10, 28);
 
-  // States
-  ctx.font = "24px Arial";
   ctx.textAlign = "center";
+  ctx.font = "24px Arial";
 
   if (state === "start") {
     ctx.fillText("🐮 Flying Cow", 180, 280);
     ctx.font = "18px Arial";
     ctx.fillText("Tap to Start", 180, 320);
   }
-
   if (state === "over") {
     ctx.fillText("Game Over", 180, 300);
     ctx.font = "18px Arial";
     ctx.fillText("Tap to restart", 180, 340);
   }
-
   ctx.textAlign = "left";
 }
 
-function loop() {
-  update();
+// ===== MAIN LOOP (FIXED TIMESTEP) =====
+function loop(time) {
+  if (!lastTime) lastTime = time;
+  let delta = (time - lastTime) / 1000;
+  if (delta > 0.25) delta = 0.25;
+  lastTime = time;
+
+  accumulator += delta;
+  inputTimer -= delta;
+
+  while (accumulator >= FIXED_DT) {
+    // buffered input
+    if (inputTimer > 0 && state === "play") {
+      jump();
+      inputTimer = 0;
+    }
+    fixedUpdate(FIXED_DT);
+    accumulator -= FIXED_DT;
+  }
+
   draw();
   requestAnimationFrame(loop);
 }
 
+// ===== INPUT =====
 canvas.addEventListener("touchstart", () => {
-  if (state === "start") state = "play";
-  else if (state === "play") cow.vy = JUMP;
-  else if (state === "over") resetGame();
+  if (state === "start") {
+    state = "play";
+    jump();
+  } else if (state === "play") {
+    inputTimer = INPUT_BUFFER; // buffer
+  } else if (state === "over") {
+    resetGame();
+  }
 });
 
 resetGame();
-loop();
+requestAnimationFrame(loop);
 </script>
 
 </body>
