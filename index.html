@@ -116,9 +116,26 @@ function fixedUpdate(dt) {
 function draw() {
   ctx.clearRect(0,0,360,640);
 
-  // Cow (placeholder)
-  ctx.fillStyle = "white";
-  ctx.fillRect(cow.x, cow.y, cow.w, cow.h);
+  // Cow body
+ctx.fillStyle = "white";
+ctx.fillRect(cow.x, cow.y, cow.w, cow.h);
+
+// Eyes
+ctx.fillStyle = "black";
+ctx.fillRect(cow.x + 10, cow.y + 10, 4, 4);
+ctx.fillRect(cow.x + 24, cow.y + 10, 4, 4);
+
+// Mouth (serious 😐)
+ctx.fillRect(cow.x + 16, cow.y + 22, 8, 2);
+
+// Blonde hair
+ctx.fillStyle = "#F6D365";
+ctx.beginPath();
+ctx.moveTo(cow.x + 6, cow.y);
+ctx.lineTo(cow.x + 30, cow.y);
+ctx.lineTo(cow.x + 22, cow.y - 8);
+ctx.closePath();
+ctx.fill();
 
   // Pipes
   ctx.fillStyle = "#22c55e";
