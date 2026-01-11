@@ -3,256 +3,318 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Flappy Cyberpunk Pro</title>
+    <title>Neon Eco System</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
-        
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Orbitron', sans-serif; }
-        canvas { display: block; filter: drop-shadow(0 0 10px #00f2ff); }
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700;900&display=swap');
 
-        #ui {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        :root { --main: #00f2ff; --bg: #050508; --gold: #ffd700; --red: #ff0055; --glitch: #00ff00; }
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        
+        body { margin: 0; background: var(--bg); font-family: 'Rajdhani', sans-serif; overflow: hidden; color: #fff; }
+        canvas { display: block; width: 100%; height: 100%; }
+
+        /* --- UI LAYERS --- */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        
+        /* HUD (Head-Up Display) */
+        .hud { position: absolute; top: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; z-index: 10; }
+        .currency { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.6); padding: 5px 15px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); pointer-events: auto; }
+        .currency img { width: 20px; height: 20px; } 
+        .currency span { font-size: 20px; font-weight: 700; color: var(--gold); text-shadow: 0 0 10px var(--gold); }
+        .score-live { font-size: 40px; font-weight: 900; opacity: 0.5; }
+
+        /* MENU SCREEN */
+        #menu, #shop { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(5, 5, 8, 0.95); backdrop-filter: blur(10px);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            pointer-events: none; color: #fff;
+            pointer-events: auto; transition: 0.3s; z-index: 20;
         }
-
-        .score-box { position: absolute; top: 40px; font-size: 60px; font-weight: 900; color: #00f2ff; text-shadow: 0 0 20px #00f2ff; }
-        .hint { font-size: 18px; margin-top: 200px; animation: blink 1s infinite; text-transform: uppercase; }
         
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
-
-        #leaderboard {
-            position: absolute; bottom: 20px; font-size: 14px; color: rgba(255,255,255,0.5);
+        h1 { font-size: 50px; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 5px; 
+             background: linear-gradient(to right, #fff, var(--main)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        .btn { 
+            background: linear-gradient(45deg, var(--main), #00aaff); border: none; 
+            padding: 15px 50px; margin: 10px; border-radius: 8px; 
+            font-size: 24px; font-weight: 800; color: #000; cursor: pointer;
+            box-shadow: 0 0 20px rgba(0, 242, 255, 0.4); transform: skew(-10deg);
         }
+        .btn:active { transform: scale(0.95) skew(-10deg); }
+        .btn-shop { background: transparent; border: 2px solid var(--gold); color: var(--gold); box-shadow: none; }
+
+        /* SHOP UI */
+        #shop { display: none; padding: 20px; justify-content: flex-start; padding-top: 80px; }
+        .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 400px; overflow-y: auto; }
+        .item-card { 
+            background: rgba(255,255,255,0.05); border: 1px solid #333; border-radius: 15px; 
+            padding: 15px; text-align: center; position: relative; transition: 0.2s;
+        }
+        .item-card.active { border-color: var(--main); box-shadow: 0 0 15px var(--main); background: rgba(0, 242, 255, 0.1); }
+        .preview { width: 50px; height: 50px; border-radius: 50%; margin: 0 auto 10px auto; box-shadow: 0 0 10px currentColor; }
+        
+        .buy-btn { 
+            background: #333; color: #fff; border: none; padding: 8px; width: 100%; border-radius: 5px; font-weight: bold; margin-top: 5px; 
+        }
+        .buy-btn.owned { background: var(--main); color: #000; }
+        .buy-btn.equipped { background: #0f0; color: #000; }
+        .close-shop { position: absolute; top: 20px; right: 20px; font-size: 30px; background: none; border: none; color: #fff; }
+
     </style>
 </head>
 <body>
 
-    <div id="ui">
-        <div class="score-box" id="score">0</div>
-        <div id="start-screen">
-            <h1 style="font-size: 30px; color: #ff00ff; text-shadow: 0 0 15px #ff00ff;">CYBER BIRD</h1>
-            <div class="hint">TAP TO START</div>
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="ui-layer">
+        <div class="hud">
+            <div class="currency" onclick="openShop()">
+                <span>💰</span> <span id="money-display">0</span>
+            </div>
+            <div class="score-live" id="score-display">0</div>
         </div>
     </div>
 
-    <canvas id="gameCanvas"></canvas>
+    <div id="menu">
+        <h1>NEON FLY</h1>
+        <p style="color:#888; margin-bottom: 30px;">BEST SCORE: <span id="best-score">0</span></p>
+        <button class="btn" onclick="startGame()">PLAY</button>
+        <button class="btn btn-shop" onclick="openShop()">SKIN SHOP</button>
+    </div>
+
+    <div id="shop">
+        <button class="close-shop" onclick="closeShop()">✕</button>
+        <h2 style="color:var(--gold); margin-bottom: 20px;">MARKETPLACE</h2>
+        <div class="shop-grid" id="shop-container">
+            </div>
+    </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const scoreEl = document.getElementById('score');
-        const startScreen = document.getElementById('start-screen');
-
-        // --- GAME ASSETS (SOUNDS) ---
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playSound(freq, type, duration) {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = type;
-            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + duration);
-        }
-
-        // --- SETTINGS ---
-        let w, h, raf;
-        let gameState = 'START';
-        let score = 0;
-        let frame = 0;
-
-        function resize() {
-            w = canvas.width = window.innerWidth;
-            h = canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resize);
-        resize();
-
-        // --- OBJECTS ---
-        let bird = {
-            x: 80, y: h/2, radius: 15, 
-            velocity: 0, gravity: 0.25, jump: -6,
-            rotation: 0, color: '#00f2ff'
+        // --- ECOSYSTEM DATA & SAVE SYSTEM ---
+        const GameData = {
+            money: 0,
+            highScore: 0,
+            skins: [
+                { id: 'def', name: 'Neon Blue', price: 0, color: '#00f2ff', owned: true },
+                { id: 'red', name: 'Crimson', price: 50, color: '#ff0055', owned: false },
+                { id: 'gold', name: 'Rich Gold', price: 200, color: '#ffd700', owned: false },
+                { id: 'hacker', name: 'Glitch Matrix', price: 500, color: '#00ff00', owned: false }
+            ],
+            equipped: 'def'
         };
 
+        // Load Save
+        const saved = localStorage.getItem('neon_eco_v1');
+        if(saved) {
+            const parsed = JSON.parse(saved);
+            GameData.money = parsed.money;
+            GameData.highScore = parsed.highScore;
+            GameData.equipped = parsed.equipped;
+            // Merge skins to keep progress but update stats if code changes
+            parsed.skins.forEach(s => {
+                const existing = GameData.skins.find(x => x.id === s.id);
+                if(existing) existing.owned = s.owned;
+            });
+        }
+
+        function saveGame() {
+            localStorage.setItem('neon_eco_v1', JSON.stringify(GameData));
+            updateUI();
+        }
+
+        // --- SHOP LOGIC ---
+        function updateUI() {
+            document.getElementById('money-display').innerText = GameData.money;
+            document.getElementById('best-score').innerText = GameData.highScore;
+            renderShop();
+        }
+
+        function renderShop() {
+            const container = document.getElementById('shop-container');
+            container.innerHTML = '';
+            GameData.skins.forEach(skin => {
+                const el = document.createElement('div');
+                el.className = `item-card ${GameData.equipped === skin.id ? 'active' : ''}`;
+                
+                let btnText = `${skin.price} $NC`;
+                let btnClass = 'buy-btn';
+                let onclick = `buySkin('${skin.id}')`;
+
+                if(skin.owned) {
+                    if(GameData.equipped === skin.id) {
+                        btnText = "EQUIPPED";
+                        btnClass += " equipped";
+                        onclick = "";
+                    } else {
+                        btnText = "EQUIP";
+                        btnClass += " owned";
+                        onclick = `equipSkin('${skin.id}')`;
+                    }
+                }
+
+                el.innerHTML = `
+                    <div class="preview" style="background:${skin.color}; box-shadow: 0 0 15px ${skin.color}"></div>
+                    <h3 style="margin:5px 0; font-size:16px;">${skin.name}</h3>
+                    <button class="${btnClass}" onclick="${onclick}">${btnText}</button>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function buySkin(id) {
+            const skin = GameData.skins.find(s => s.id === id);
+            if(GameData.money >= skin.price) {
+                GameData.money -= skin.price;
+                skin.owned = true;
+                tg.HapticFeedback.notificationOccurred('success');
+                equipSkin(id); // Auto equip
+            } else {
+                tg.HapticFeedback.notificationOccurred('error');
+                alert("Pul yetmayapti! Ko'proq o'yna.");
+            }
+        }
+
+        function equipSkin(id) {
+            GameData.equipped = id;
+            saveGame();
+        }
+
+        function openShop() { document.getElementById('shop').style.display = 'flex'; }
+        function closeShop() { document.getElementById('shop').style.display = 'none'; }
+
+        // --- GAME ENGINE ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let w, h, raf, state = 'MENU';
+        let frames = 0, score = 0;
+
+        // Physics Entities
+        const bird = { x: 50, y: 0, v: 0, r: 15 };
         let pipes = [];
         let particles = [];
 
-        class Particle {
-            constructor(x, y, color) {
-                this.x = x; this.y = y;
-                this.vx = (Math.random() - 0.5) * 5;
-                this.vy = (Math.random() - 0.5) * 5;
-                this.alpha = 1;
-                this.color = color;
-            }
-            update() { this.x += this.vx; this.y += this.vy; this.alpha -= 0.02; }
-            draw() {
-                ctx.globalAlpha = this.alpha;
-                ctx.shadowBlur = 10; ctx.shadowColor = this.color;
-                ctx.fillStyle = this.color;
-                ctx.fillRect(this.x, this.y, 4, 4);
-                ctx.globalAlpha = 1; ctx.shadowBlur = 0;
-            }
-        }
+        function resize() { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize); resize();
 
-        function createPipe() {
-            let gap = 160;
-            let minH = 100;
-            let pipeH = Math.random() * (h - gap - (minH * 2)) + minH;
-            pipes.push({ x: w, top: pipeH, bottom: h - pipeH - gap, passed: false });
-        }
-
-        // --- GAME LOOP ---
-        function update() {
-            if (gameState === 'PLAY') {
-                frame++;
-                bird.velocity += bird.gravity;
-                bird.y += bird.velocity;
-                bird.rotation = Math.min(Math.PI/4, Math.max(-Math.PI/4, bird.velocity * 0.1));
-
-                if (frame % 100 === 0) createPipe();
-
-                pipes.forEach((p, i) => {
-                    p.x -= 3.5;
-                    
-                    // Collision
-                    if (bird.x + bird.radius > p.x && bird.x - bird.radius < p.x + 60) {
-                        if (bird.y - bird.radius < p.top || bird.y + bird.radius > h - p.bottom) {
-                            gameOver();
-                        }
-                    }
-
-                    if (p.x + 60 < bird.x && !p.passed) {
-                        score++;
-                        p.passed = true;
-                        scoreEl.innerText = score;
-                        playSound(800, 'square', 0.1);
-                        tg.HapticFeedback.impactOccurred('light');
-                        // Change skin color
-                        if(score % 5 === 0) bird.color = `hsl(${Math.random()*360}, 100%, 50%)`;
-                    }
-                });
-
-                if (pipes.length > 0 && pipes[0].x < -100) pipes.shift();
-                if (bird.y + bird.radius > h || bird.y - bird.radius < 0) gameOver();
-
-                // Particle trail
-                if (frame % 2 === 0) particles.push(new Particle(bird.x - 10, bird.y, bird.color));
-            }
-
-            particles.forEach((p, i) => {
-                p.update();
-                if (p.alpha <= 0) particles.splice(i, 1);
-            });
-        }
-
-        function draw() {
-            // Background (Cyberpunk Gradient)
-            let grad = ctx.createLinearGradient(0, 0, 0, h);
-            grad.addColorStop(0, '#0a0a2e');
-            grad.addColorStop(1, '#000000');
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, w, h);
-
-            // Gridlines (Moving effect)
-            ctx.strokeStyle = 'rgba(0, 242, 255, 0.05)';
-            ctx.lineWidth = 1;
-            let scroll = (frame * 2) % 50;
-            for(let i = -scroll; i < w; i += 50) {
-                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.stroke();
-            }
-
-            particles.forEach(p => p.draw());
-
-            // Pipes
-            pipes.forEach(p => {
-                ctx.shadowBlur = 15; ctx.shadowColor = '#ff00ff';
-                ctx.fillStyle = '#111';
-                ctx.strokeStyle = '#ff00ff';
-                ctx.lineWidth = 3;
-                
-                // Top pipe
-                ctx.fillRect(p.x, 0, 60, p.top);
-                ctx.strokeRect(p.x, -10, 60, p.top + 10);
-                
-                // Bottom pipe
-                ctx.fillRect(p.x, h - p.bottom, 60, p.bottom);
-                ctx.strokeRect(p.x, h - p.bottom, 60, p.bottom + 10);
-                ctx.shadowBlur = 0;
-            });
-
-            // Bird
-            ctx.save();
-            ctx.translate(bird.x, bird.y);
-            ctx.rotate(bird.rotation);
-            ctx.shadowBlur = 20; ctx.shadowColor = bird.color;
-            ctx.fillStyle = bird.color;
-            ctx.beginPath();
-            ctx.arc(0, 0, bird.radius, 0, Math.PI * 2);
-            ctx.fill();
-            // Eye
-            ctx.fillStyle = '#fff';
-            ctx.beginPath(); ctx.arc(7, -5, 5, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#000';
-            ctx.beginPath(); ctx.arc(9, -5, 2, 0, Math.PI * 2); ctx.fill();
-            ctx.restore();
-        }
-
-        function loop() {
-            update();
-            draw();
-            raf = requestAnimationFrame(loop);
+        function startGame() {
+            document.getElementById('menu').style.display = 'none';
+            state = 'PLAY';
+            bird.y = h/2; bird.v = 0;
+            pipes = []; particles = []; score = 0; frames = 0;
+            document.getElementById('score-display').innerText = 0;
+            loop();
         }
 
         function gameOver() {
-            gameState = 'OVER';
-            playSound(150, 'sawtooth', 0.5);
-            tg.HapticFeedback.notificationOccurred('error');
+            state = 'MENU';
+            document.getElementById('menu').style.display = 'flex';
+            tg.HapticFeedback.notificationOccurred('warning');
             
-            // Death particles
-            for(let i=0; i<20; i++) particles.push(new Particle(bird.x, bird.y, bird.color));
-            
-            setTimeout(() => {
-                reset();
-            }, 1500);
+            // Economy Update
+            GameData.money += score;
+            if(score > GameData.highScore) GameData.highScore = score;
+            saveGame();
+            cancelAnimationFrame(raf);
         }
 
-        function reset() {
-            bird.y = h/2; bird.velocity = 0; bird.color = '#00f2ff';
-            pipes = []; particles = []; score = 0; frame = 0;
-            scoreEl.innerText = '0';
-            gameState = 'START';
-            startScreen.style.display = 'block';
-        }
+        function loop() {
+            if(state !== 'PLAY') return;
 
-        // --- INPUT ---
-        function handleAction() {
-            if (gameState === 'START') {
-                gameState = 'PLAY';
-                startScreen.style.display = 'none';
-                audioCtx.resume();
+            // Clear
+            ctx.fillStyle = '#050508';
+            ctx.fillRect(0,0,w,h);
+
+            // Update Bird
+            bird.v += 0.4; // Gravity
+            bird.y += bird.v;
+            
+            // Get Current Skin Color
+            const currentSkin = GameData.skins.find(s => s.id === GameData.equipped);
+            const color = currentSkin ? currentSkin.color : '#fff';
+
+            // Particles Trail
+            if(frames % 5 === 0) particles.push({x: bird.x, y: bird.y, r: Math.random()*4, a: 1});
+
+            // Draw Particles
+            particles.forEach((p, i) => {
+                p.x -= 2; p.a -= 0.05;
+                ctx.fillStyle = color;
+                ctx.globalAlpha = p.a;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+                if(p.a <= 0) particles.splice(i, 1);
+            });
+            ctx.globalAlpha = 1;
+
+            // Draw Bird
+            ctx.shadowBlur = 20; ctx.shadowColor = color;
+            ctx.fillStyle = color;
+            ctx.beginPath(); ctx.arc(bird.x, bird.y, bird.r, 0, Math.PI*2); ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Pipes Logic
+            if(frames % 100 === 0) {
+                let gap = 180;
+                let topH = Math.random() * (h - gap - 100) + 50;
+                pipes.push({x: w, top: topH, gap: gap, passed: false});
             }
-            if (gameState === 'PLAY') {
-                bird.velocity = bird.jump;
-                playSound(400, 'triangle', 0.1);
+
+            pipes.forEach((p, i) => {
+                p.x -= 4; // Speed
+                
+                // Draw Pipe (Neon Style)
+                ctx.fillStyle = '#111';
+                ctx.strokeStyle = color; // Pipes adapt to skin color!
+                ctx.lineWidth = 2;
+                
+                // Top
+                ctx.fillRect(p.x, 0, 60, p.top);
+                ctx.strokeRect(p.x, 0, 60, p.top);
+                // Bottom
+                ctx.fillRect(p.x, p.top + p.gap, 60, h);
+                ctx.strokeRect(p.x, p.top + p.gap, 60, h);
+
+                // Collision
+                if(bird.x + bird.r > p.x && bird.x - bird.r < p.x + 60) {
+                    if(bird.y - bird.r < p.top || bird.y + bird.r > p.top + p.gap) gameOver();
+                }
+                // Score
+                if(p.x + 60 < bird.x && !p.passed) {
+                    score++; p.passed = true;
+                    document.getElementById('score-display').innerText = score;
+                    tg.HapticFeedback.impactOccurred('light');
+                    // Bonus Coin Particle
+                    particles.push({x: bird.x, y: bird.y, r: 8, a: 1, isCoin: true});
+                }
+            });
+            
+            // Remove off-screen pipes
+            if(pipes.length > 0 && pipes[0].x < -70) pipes.shift();
+
+            // Ground Hit
+            if(bird.y > h || bird.y < 0) gameOver();
+
+            frames++;
+            raf = requestAnimationFrame(loop);
+        }
+
+        // Controls
+        window.addEventListener('mousedown', jump);
+        window.addEventListener('touchstart', (e) => { e.preventDefault(); jump(); }, {passive: false});
+
+        function jump() {
+            if(state === 'PLAY') {
+                bird.v = -7;
                 tg.HapticFeedback.impactOccurred('soft');
             }
         }
 
-        window.addEventListener('mousedown', (e) => { e.preventDefault(); handleAction(); });
-        window.addEventListener('touchstart', (e) => { e.preventDefault(); handleAction(); }, {passive: false});
+        // Init
+        updateUI();
 
-        loop();
     </script>
 </body>
-    </html>
-    
+</html>
