@@ -1,213 +1,320 @@
 <!DOCTYPE html>
-<html>
+<html lang="uz">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NEON ECO PRO</title>
+    <title>Neon Cyber Domination</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
-        body { background: #000; color: #fff; overflow: hidden; height: 100vh; }
-        
-        #gameCanvas { display: block; background: #050508; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Syncopate:wght@700&display=swap');
 
-        /* INTERFEYS */
-        #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        .hud { padding: 20px; display: flex; justify-content: space-between; pointer-events: auto; }
-        .coin-box { background: rgba(255,255,255,0.1); padding: 5px 15px; border-radius: 20px; border: 1px solid #ffd700; color: #ffd700; font-weight: bold; }
-        
-        /* EKRANLAR */
-        .screen { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.9); display: flex; flex-direction: column; 
-            align-items: center; justify-content: center; pointer-events: auto; z-index: 100;
+        :root {
+            --neon-blue: #00f2ff;
+            --neon-pink: #ff00ff;
+            --neon-gold: #ffd700;
+            --bg-deep: #020205;
         }
-        .btn { 
-            background: #00f2ff; color: #000; border: none; padding: 15px 40px; 
-            border-radius: 10px; font-weight: bold; font-size: 20px; margin: 10px; cursor: pointer;
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; background: var(--bg-deep);
+            font-family: 'Orbitron', sans-serif; color: #fff;
         }
-        
-        /* SHOP */
-        #shop-screen { display: none; }
-        .shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 20px; width: 100%; }
-        .item { background: #111; padding: 10px; border-radius: 10px; text-align: center; border: 1px solid #333; }
-        .item.active { border-color: #00f2ff; }
-        .skin-preview { width: 30px; height: 30px; border-radius: 50%; margin: 0 auto 10px; }
+
+        canvas { display: block; filter: saturate(1.5) contrast(1.2); }
+
+        /* UI OVERLAY */
+        #ui-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 10;
+        }
+
+        /* HUD - PULLAR VA SCORE */
+        .hud-bar {
+            position: absolute; top: 20px; left: 0; width: 100%;
+            display: flex; justify-content: space-between; padding: 0 20px;
+            box-sizing: border-box; pointer-events: auto;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 242, 255, 0.3);
+            padding: 8px 15px; border-radius: 12px;
+            display: flex; align-items: center; gap: 10px;
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.2);
+        }
+
+        .coin-val { color: var(--neon-gold); font-weight: 900; font-size: 20px; }
+
+        /* MODAL SCREENS */
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(20px);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            pointer-events: auto; z-index: 100; transition: 0.5s;
+        }
+
+        h1 {
+            font-family: 'Syncopate', sans-serif; font-size: 40px;
+            text-transform: uppercase; letter-spacing: 10px; margin: 0;
+            background: linear-gradient(to bottom, #fff, var(--neon-blue));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 15px var(--neon-blue));
+        }
+
+        .btn-main {
+            background: var(--neon-blue); color: #000;
+            border: none; padding: 20px 60px; font-size: 22px; font-weight: 900;
+            margin-top: 40px; border-radius: 5px; cursor: pointer;
+            clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
+            transition: 0.3s;
+        }
+
+        .btn-main:active { transform: scale(0.9); background: var(--neon-pink); }
+
+        /* SHOP INTERFACE */
+        #shop-modal { display: none; }
+        .inventory-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;
+            width: 90%; max-height: 50vh; overflow-y: auto; margin-top: 30px;
+        }
+
+        .skin-card {
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 15px; padding: 15px; text-align: center;
+            transition: 0.3s;
+        }
+
+        .skin-card.owned { border-color: var(--neon-blue); }
+        .skin-card.equipped { background: rgba(0, 242, 255, 0.15); border-width: 2px; }
+
+        .preview-circle {
+            width: 50px; height: 50px; border-radius: 50%; margin: 0 auto 10px;
+            box-shadow: 0 0 20px currentColor;
+        }
     </style>
 </head>
 <body>
 
     <canvas id="gameCanvas"></canvas>
 
-    <div id="ui">
-        <div class="hud">
-            <div class="coin-box">💰 <span id="coins">0</span></div>
-            <div style="font-size: 30px; font-weight: bold;" id="live-score">0</div>
+    <div id="ui-container">
+        <div class="hud-bar">
+            <div class="stat-item" onclick="toggleShop(true)">
+                <span style="font-size: 22px;">💰</span>
+                <span id="balance" class="coin-val">0</span>
+            </div>
+            <div id="live-score" style="font-size: 45px; font-weight: 900; color: rgba(255,255,255,0.5);">0</div>
         </div>
 
-        <div id="main-menu" class="screen">
-            <h1 style="color: #00f2ff; margin-bottom: 10px;">NEON FLY</h1>
-            <p style="margin-bottom: 20px;">BEST: <span id="high-score">0</span></p>
-            <button class="btn" onclick="Game.start()">PLAY</button>
-            <button class="btn" style="background:none; color:#ffd700; border:1px solid #ffd700;" onclick="UI.showShop()">SHOP</button>
+        <div id="menu-screen" class="screen">
+            <h1>NEON FLY</h1>
+            <p style="color: #666; letter-spacing: 3px;">DOMINATION EDITION</p>
+            <div style="margin-top: 20px;">BEST SCORE: <span id="high-score" style="color:var(--neon-pink)">0</span></div>
+            <button class="btn-main" onclick="startGame()">INITIATE</button>
+            <button onclick="toggleShop(true)" style="background:none; border:none; color:var(--neon-gold); margin-top:20px; font-weight:bold; cursor:pointer;">ACCESS MARKET</button>
         </div>
 
-        <div id="shop-screen" class="screen">
-            <h2 style="color:#ffd700; margin-bottom: 20px;">MARKET</h2>
-            <div class="shop-grid" id="shop-items"></div>
-            <button class="btn" onclick="UI.hideShop()">BACK</button>
+        <div id="shop-modal" class="screen">
+            <h2 style="color: var(--neon-gold);">BLACK MARKET</h2>
+            <div class="inventory-grid" id="skin-list"></div>
+            <button class="btn-main" style="background:none; border:1px solid #fff; color:#fff; font-size:16px; padding:10px 30px;" onclick="toggleShop(false)">RETURN</button>
         </div>
     </div>
 
     <script>
-        // --- ASOSIY O'YIN TIZIMI ---
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        let tg = window.Telegram ? window.Telegram.WebApp : null;
-        if(tg) tg.expand();
+        let w, h, raf, state = 'MENU';
 
-        const Data = {
-            coins: parseInt(localStorage.getItem('coins')) || 0,
-            best: parseInt(localStorage.getItem('best')) || 0,
-            currentSkin: localStorage.getItem('skin') || '#00f2ff',
-            ownedSkins: JSON.parse(localStorage.getItem('owned')) || ['#00f2ff']
+        // --- ECOSYSTEM DATA ---
+        let User = {
+            coins: parseInt(localStorage.getItem('neon_coins')) || 0,
+            best: parseInt(localStorage.getItem('neon_best')) || 0,
+            equipped: localStorage.getItem('neon_skin') || 'cyan',
+            inventory: JSON.parse(localStorage.getItem('neon_inv')) || ['cyan']
         };
 
-        const Game = {
-            state: 'MENU',
-            score: 0,
-            bird: { x: 50, y: 0, v: 0, r: 12 },
-            pipes: [],
-            frame: 0,
+        const SKINS = {
+            cyan: { color: '#00f2ff', price: 0, aura: 'rgba(0, 242, 255, 0.5)' },
+            pink: { color: '#ff00ff', price: 100, aura: 'rgba(255, 0, 255, 0.5)' },
+            gold: { color: '#ffd700', price: 500, aura: 'rgba(255, 215, 0, 0.8)' },
+            glitch: { color: '#00ff00', price: 1000, aura: 'rgba(0, 255, 0, 0.9)' }
+        };
 
-            init() {
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
-                UI.update();
-                this.renderMenu();
-            },
+        function save() {
+            localStorage.setItem('neon_coins', User.coins);
+            localStorage.setItem('neon_best', User.best);
+            localStorage.setItem('neon_skin', User.equipped);
+            localStorage.setItem('neon_inv', JSON.stringify(User.inventory));
+            updateUI();
+        }
 
-            start() {
-                this.state = 'PLAY';
-                this.score = 0;
-                this.bird.y = canvas.height / 2;
-                this.bird.v = 0;
-                this.pipes = [];
-                document.getElementById('main-menu').style.display = 'none';
-                this.loop();
-            },
+        function updateUI() {
+            document.getElementById('balance').innerText = User.coins;
+            document.getElementById('high-score').innerText = User.best;
+            renderShop();
+        }
+        
+        // --- GAME LOGIC ---
+        let bird = { x: 80, y: 0, v: 0, r: 18 };
+        let pipes = [];
+        let particles = [];
+        let score = 0, frame = 0;
 
-            loop() {
-                if (this.state !== 'PLAY') return;
+        function resize() {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize); resize();
 
-                // Fizika
-                this.bird.v += 0.5;
-                this.bird.y += this.bird.v;
+        function startGame() {
+            state = 'PLAY';
+            document.getElementById('menu-screen').style.display = 'none';
+            bird.y = h/2; bird.v = 0;
+            pipes = []; particles = []; score = 0; frame = 0;
+            loop();
+        }
 
-                if (this.frame++ % 100 === 0) {
-                    let gap = 160;
-                    let top = Math.random() * (canvas.height - gap - 100) + 50;
-                    this.pipes.push({ x: canvas.width, t: top, g: gap, p: false });
-                }
+        function loop() {
+            if(state !== 'PLAY') return;
+            
+            // Physics
+            bird.v += 0.5; // Smooth gravity
+            bird.y += bird.v;
 
-                // Chizish
-                ctx.fillStyle = '#050508';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                ctx.fillStyle = Data.currentSkin;
-                ctx.beginPath(); ctx.arc(this.bird.x, this.bird.y, this.bird.r, 0, Math.PI * 2); ctx.fill();
-
-                this.pipes.forEach((p, i) => {
-                    p.x -= 3;
-                    ctx.fillStyle = '#1a1a1a';
-                    ctx.strokeStyle = Data.currentSkin;
-                    ctx.lineWidth = 2;
-                    ctx.fillRect(p.x, 0, 50, p.t); ctx.strokeRect(p.x, 0, 50, p.t);
-                    ctx.fillRect(p.x, p.t + p.g, 50, canvas.height); ctx.strokeRect(p.x, p.t + p.g, 50, canvas.height);
-
-                    // Collision
-                    if (this.bird.x + this.bird.r > p.x && this.bird.x - this.bird.r < p.x + 50) {
-                        if (this.bird.y - this.bird.r < p.t || this.bird.y + this.bird.r > p.t + p.g) this.over();
-                    }
-                    if (p.x + 50 < this.bird.x && !p.p) {
-                        this.score++; p.p = true;
-                        document.getElementById('live-score').innerText = this.score;
-                        if(tg) tg.HapticFeedback.impactOccurred('light');
-                    }
-                });
-
-                if (this.pipes.length > 0 && this.pipes[0].x < -60) this.pipes.shift();
-                if (this.bird.y > canvas.height || this.bird.y < 0) this.over();
-
-                requestAnimationFrame(() => this.loop());
-            },
-
-            over() {
-                this.state = 'MENU';
-                Data.coins += this.score;
-                if (this.score > Data.best) Data.best = this.score;
-                localStorage.setItem('coins', Data.coins);
-                localStorage.setItem('best', Data.best);
-                UI.update();
-                document.getElementById('main-menu').style.display = 'flex';
-                if(tg) tg.HapticFeedback.notificationOccurred('error');
+            if(frame++ % 95 === 0) {
+                let gap = 190;
+                let top = Math.random() * (h - gap - 200) + 100;
+                pipes.push({ x: w, t: top, g: gap, p: false });
             }
-        };
 
-        const UI = {
-            update() {
-                document.getElementById('coins').innerText = Data.coins;
-                document.getElementById('high-score').innerText = Data.best;
-                document.getElementById('live-score').innerText = '0';
-            },
-            showShop() {
-                const shop = document.getElementById('shop-items');
-                shop.innerHTML = '';
-                const skins = [
-                    {c: '#00f2ff', p: 0}, {c: '#ff0055', p: 50}, 
-                    {c: '#ffd700', p: 150}, {c: '#00ff00', p: 300}
-                ];
-                skins.forEach(s => {
-                    let owned = Data.ownedSkins.includes(s.c);
-                    let active = Data.currentSkin === s.c;
-                    shop.innerHTML += `
-                        <div class="item ${active ? 'active' : ''}">
-                            <div class="skin-preview" style="background:${s.c}"></div>
-                            <button onclick="UI.buy('${s.c}', ${s.p})" style="width:100%; font-size:10px;">
-                                ${active ? 'ACTIVE' : (owned ? 'EQUIP' : s.p + ' 💰')}
-                            </button>
-                        </div>
-                    `;
-                });
-                document.getElementById('shop-screen').style.display = 'flex';
-            },
-            hideShop() { document.getElementById('shop-screen').style.display = 'none'; },
-            buy(color, price) {
-                if (Data.ownedSkins.includes(color)) {
-                    Data.currentSkin = color;
-                } else if (Data.coins >= price) {
-                    Data.coins -= price;
-                    Data.ownedSkins.push(color);
-                    Data.currentSkin = color;
-                } else {
-                    alert("Pul yetmayapti!");
-                    return;
+            // Draw
+            ctx.fillStyle = '#020205'; ctx.fillRect(0,0,w,h);
+            
+            // Grid background (Full HD effect)
+            ctx.strokeStyle = 'rgba(0, 242, 255, 0.05)';
+            for(let i=0; i<w; i+=50) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.stroke(); }
+
+            let skin = SKINS[User.equipped];
+
+            // Particles
+            if(frame % 2 === 0) particles.push({ x: bird.x-10, y: bird.y, r: Math.random()*5, a: 1, c: skin.color });
+            particles.forEach((p, i) => {
+                p.x -= 3; p.a -= 0.02;
+                ctx.globalAlpha = p.a;
+                ctx.shadowBlur = 10; ctx.shadowColor = p.c;
+                ctx.fillStyle = p.c;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+                if(p.a <= 0) particles.splice(i, 1);
+            });
+            ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+
+            // Pipes
+            pipes.forEach((p, i) => {
+                p.x -= 4.5;
+                ctx.fillStyle = '#0a0a1a';
+                ctx.strokeStyle = skin.color;
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = 15; ctx.shadowColor = skin.color;
+                
+                // Neon Pipes
+                ctx.strokeRect(p.x, -10, 60, p.t+10);
+                ctx.strokeRect(p.x, p.t+p.g, 60, h-(p.t+p.g)+10);
+                ctx.shadowBlur = 0;
+
+                // Collision
+                if(bird.x+bird.r > p.x && bird.x-bird.r < p.x+60) {
+                    if(bird.y-bird.r < p.t || bird.y+bird.r > p.t+p.g) endGame();
                 }
-                localStorage.setItem('skin', Data.currentSkin);
-                localStorage.setItem('coins', Data.coins);
-                localStorage.setItem('owned', JSON.stringify(Data.ownedSkins));
-                this.update(); this.showShop();
+                if(p.x+60 < bird.x && !p.p) {
+                    score++; p.p = true;
+                    document.getElementById('live-score').innerText = score;
+                    tg.HapticFeedback.impactOccurred('medium');
+                }
+            });
+
+            // Bird
+            ctx.save();
+            ctx.translate(bird.x, bird.y);
+            ctx.rotate(Math.min(Math.PI/4, Math.max(-Math.PI/4, bird.v * 0.1)));
+            ctx.shadowBlur = 30; ctx.shadowColor = skin.color;
+            ctx.fillStyle = skin.color;
+            ctx.beginPath(); ctx.arc(0,0,bird.r,0,Math.PI*2); ctx.fill();
+            // HUD Eye
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(8,-5,6,0,Math.PI*2); ctx.fill();
+            ctx.restore();
+
+            if(pipes.length > 0 && pipes[0].x < -100) pipes.shift();
+            if(bird.y > h || bird.y < 0) endGame();
+
+            raf = requestAnimationFrame(loop);
+        }
+
+        function endGame() {
+            state = 'MENU';
+            cancelAnimationFrame(raf);
+            tg.HapticFeedback.notificationOccurred('error');
+            
+            // Economy calculation
+            User.coins += score;
+            if(score > User.best) User.best = score;
+            save();
+            
+            document.getElementById('menu-screen').style.display = 'flex';
+        }
+
+        // --- SHOP ENGINE ---
+        function renderShop() {
+            const container = document.getElementById('skin-list');
+            container.innerHTML = '';
+            Object.keys(SKINS).forEach(id => {
+                const s = SKINS[id];
+                const owned = User.inventory.includes(id);
+                const equipped = User.equipped === id;
+                
+                const card = document.createElement('div');
+                card.className = `skin-card ${owned ? 'owned' : ''} ${equipped ? 'equipped' : ''}`;
+                card.innerHTML = `
+                    <div class="preview-circle" style="background:${s.color}; color:${s.color}"></div>
+                    <div style="font-weight:bold; font-size:12px;">${id.toUpperCase()}</div>
+                    <button onclick="handlePurchase('${id}')" style="margin-top:10px; width:100%; border-radius:5px; border:none; padding:5px; background:${equipped?'#0f0':(owned?'#fff':'#ffd700')}; font-weight:bold;">
+                        ${equipped ? 'ACTIVE' : (owned ? 'EQUIP' : s.price + ' 💰')}
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function handlePurchase(id) {
+            const s = SKINS[id];
+            if(User.inventory.includes(id)) {
+                User.equipped = id;
+            } else if(User.coins >= s.price) {
+                User.coins -= s.price;
+                User.inventory.push(id);
+                User.equipped = id;
+                tg.HapticFeedback.notificationOccurred('success');
+            } else {
+                alert("Mablag' yetarli emas!");
             }
-        };
+            save();
+        }
 
-        // Boshqaruv
-        const action = () => { if(Game.state === 'PLAY') Game.bird.v = -8; };
-        window.addEventListener('mousedown', action);
-        window.addEventListener('touchstart', (e) => { e.preventDefault(); action(); }, {passive: false});
+        function toggleShop(show) {
+            document.getElementById('shop-modal').style.display = show ? 'flex' : 'none';
+        }
 
-        window.onload = () => Game.init();
-        window.onresize = () => Game.init();
+        // Input
+        const jump = (e) => { if(e) e.preventDefault(); if(state==='PLAY') bird.v = -8; };
+        window.addEventListener('mousedown', jump);
+        window.addEventListener('touchstart', jump, {passive:false});
 
+        updateUI();
     </script>
 </body>
 </html>
