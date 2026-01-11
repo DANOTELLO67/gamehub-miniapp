@@ -3,495 +3,310 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ultimate Game Hub</title>
+    <title>Roblox Uz - Premium Hub</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-main: #0a0a0a;
-            --card-glass: rgba(30, 30, 30, 0.8);
-            --accent: #FF3366;
-            --text: #ffffff;
-            --font-main: 'Montserrat', sans-serif;
+            --bg: #050505;
+            --accent: #00f2ff;
+            --glass: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.1);
         }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
         body {
-            margin: 0; padding: 0;
-            font-family: var(--font-main);
-            background: var(--bg-main);
-            color: var(--text);
+            margin: 0; font-family: 'Outfit', sans-serif;
+            background: var(--bg); color: #fff;
             overflow: hidden; height: 100vh;
-            user-select: none; -webkit-user-select: none;
         }
 
-        /* --- HUB (MENYU) --- */
+        /* --- MODERN HUB INTERFACE --- */
         #hub {
             display: flex; flex-direction: column; align-items: center;
-            padding: 20px; height: 100%; overflow-y: auto;
-            background: radial-gradient(circle at top, #1a1a2e, #0a0a0a);
+            padding: 40px 20px; height: 100%;
+            background: radial-gradient(circle at center, #111 0%, #050505 100%);
         }
-        header { text-align: center; margin-bottom: 25px; }
-        h1 {
-            margin: 0; font-size: 28px; font-weight: 900;
-            background: linear-gradient(to right, #FF3366, #BA265D);
+        .header-logo {
+            font-size: 32px; font-weight: 900; letter-spacing: -1px;
+            background: linear-gradient(to bottom, #fff, #888);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            text-transform: uppercase; letter-spacing: 1px;
+            margin-bottom: 30px;
         }
-        .welcome-text { color: #888; font-size: 13px; margin-top: 5px; }
-        
         .grid {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
-            width: 100%; max-width: 500px;
+            display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 350px;
         }
-        .card {
-            background: var(--card-glass);
-            backdrop-filter: blur(10px);
-            border-radius: 24px; padding: 20px;
-            text-align: center; position: relative; overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.05);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            transition: transform 0.2s, border-color 0.2s;
+        .game-card {
+            background: var(--glass); border: 1px solid var(--border);
+            border-radius: 20px; padding: 20px; display: flex; align-items: center;
+            gap: 20px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .card:active { transform: scale(0.96); border-color: var(--accent); }
-        .card-icon { font-size: 45px; margin-bottom: 12px; display: block; text-shadow: 0 0 20px rgba(255,255,255,0.2); }
-        .card-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
-        .card-genre { font-size: 11px; color: var(--accent); text-transform: uppercase; font-weight: 700; }
+        .game-card:active { transform: scale(0.97); background: rgba(255,255,255,0.08); border-color: var(--accent); }
+        .icon-box { font-size: 40px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.2)); }
+        .info h3 { margin: 0; font-size: 18px; font-weight: 700; }
+        .info p { margin: 5px 0 0; font-size: 12px; color: #666; font-weight: 400; }
 
-        /* --- O'YIN SAHNASI --- */
-        #game-stage {
+        /* --- GAME ENGINE OVERLAY --- */
+        #stage {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #000; display: none; z-index: 100;
         }
-        canvas { display: block; width: 100%; height: 100%; outline: none; }
-        .game-ui {
-            position: absolute; top: 0; left: 0; width: 100%;
-            padding: 20px; display: flex; justify-content: space-between;
-            pointer-events: none; z-index: 101;
+        canvas { display: block; }
+        .ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; padding: 25px; display: flex; flex-direction: column;
+            justify-content: space-between; align-items: center; z-index: 101;
         }
-        .back-btn {
-            pointer-events: auto; background: rgba(255,255,255,0.15);
-            border: none; color: white; padding: 10px 15px;
-            border-radius: 12px; font-weight: 700; backdrop-filter: blur(5px);
-            font-family: var(--font-main);
+        .score { font-size: 60px; font-weight: 900; opacity: 0.2; }
+        .top-bar { width: 100%; display: flex; justify-content: space-between; pointer-events: auto; }
+        .btn-close {
+            background: var(--glass); border: 1px solid var(--border);
+            color: #fff; padding: 10px 20px; border-radius: 12px; font-weight: 700;
         }
-        .score-display {
-            font-size: 32px; font-weight: 900;
-            text-shadow: 2px 2px 0 #000;
-        }
-        .overlay-msg {
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 24px; font-weight: 900; color: white;
-            text-align: center; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            pointer-events: none; width: 100%;
-        }
+        .message { font-size: 20px; font-weight: 700; text-align: center; }
     </style>
 </head>
 <body>
 
     <div id="hub">
-        <header>
-            <h1 id="hub-title">GAME HUB</h1>
-            <div class="welcome-text" id="user-welcome">Welcome player</div>
-        </header>
-
+        <div class="header-logo">ROBLOX UZ</div>
         <div class="grid">
-            <div class="card" onclick="launchGame('flappy')">
-                <span class="card-icon">🐦</span>
-                <div class="card-title" data-key="game_flappy">Flappy Pro</div>
-                <div class="card-genre" data-key="genre_physics">Physics</div>
+            <div class="game-card" onclick="start('flappy')">
+                <div class="icon-box">🐦</div>
+                <div class="info">
+                    <h3 data-key="t1">Flappy Velocity</h3>
+                    <p data-key="d1">Pro Physics Engine</p>
+                </div>
             </div>
-            <div class="card" onclick="launchGame('stack')">
-                <span class="card-icon">🧱</span>
-                <div class="card-title" data-key="game_stack">Stack Master</div>
-                <div class="card-genre" data-key="genre_timing">Timing</div>
+            <div class="game-card" onclick="start('stack')">
+                <div class="icon-box">🧱</div>
+                <div class="info">
+                    <h3 data-key="t2">Perfect Stack</h3>
+                    <p data-key="d2">High Precision Timing</p>
+                </div>
             </div>
-            <div class="card" onclick="launchGame('knife')">
-                <span class="card-icon">🎯</span>
-                <div class="card-title" data-key="game_knife">Knife Hit</div>
-                <div class="card-genre" data-key="genre_aim">Precision</div>
-            </div>
-            <div class="card" onclick="launchGame('snake')">
-                <span class="card-icon">🐍</span>
-                <div class="card-title" data-key="game_snake">Neon Snake</div>
-                <div class="card-genre" data-key="genre_classic">Classic</div>
-            </div>
-            <div class="card" style="grid-column: span 2;" onclick="launchGame('2048')">
-                <span class="card-icon">🔢</span>
-                <div class="card-title" data-key="game_2048">2048 Puzzle</div>
-                <div class="card-genre" data-key="genre_logic">Logic</div>
+            <div class="game-card" onclick="start('knife')">
+                <div class="icon-box">🎯</div>
+                <div class="info">
+                    <h3 data-key="t3">Knife Master</h3>
+                    <p data-key="d3">Tactile Hit Response</p>
+                </div>
             </div>
         </div>
     </div>
 
-    <div id="game-stage">
-        <div class="game-ui">
-            <button class="back-btn" onclick="exitGame()" data-key="btn_exit">🏠 Exit</button>
-            <div class="score-display" id="score">0</div>
+    <div id="stage">
+        <div class="ui-layer">
+            <div class="top-bar">
+                <button class="btn-close" onclick="closeGame()" id="exit-btn">EXIT</button>
+            </div>
+            <div class="score" id="score-val">0</div>
+            <div class="message" id="msg-layer">TAP TO START</div>
         </div>
-        <div class="overlay-msg" id="msg">TAP TO START</div>
-        <canvas id="canvas"></canvas>
+        <canvas id="gameCanvas"></canvas>
     </div>
 
     <script>
-        // --- TIZIM SOZLAMALARI ---
         const tg = window.Telegram.WebApp;
         tg.expand();
-        tg.enableClosingConfirmation();
 
-        // 🌐 MULTILINGUAL TIZIM (UZ, RU, EN)
-        const langData = {
-            uz: {
-                hub_title: "O'YINLAR MARKAZI", welcome: "Xush kelibsiz, ",
-                btn_exit: "🏠 Chiqish", tap_start: "BOSHLASH UCHUN BOSING", game_over: "O'YIN TUGADI",
-                game_flappy: "Flappy Pro", genre_physics: "Fizika",
-                game_stack: "Stack Ustasi", genre_timing: "Aniqlik",
-                game_knife: "Pichoq Otish", genre_aim: "Nishon",
-                game_snake: "Neon Iloncha", genre_classic: "Klassika",
-                game_2048: "2048 Boshqotirma", genre_logic: "Mantiq"
-            },
-            ru: {
-                hub_title: "ИГРОВОЙ ХАБ", welcome: "Добро пожаловать, ",
-                btn_exit: "🏠 Выход", tap_start: "НАЖМИТЕ ДЛЯ СТАРТА", game_over: "ИГРА ОКОНЧЕНА",
-                game_flappy: "Flappy Pro", genre_physics: "Физика",
-                game_stack: "Мастер Стака", genre_timing: "Тайминг",
-                game_knife: "Меткий Нож", genre_aim: "Точность",
-                game_snake: "Неоновая Змейка", genre_classic: "Классика",
-                game_2048: "2048 Пазл", genre_logic: "Логика"
-            },
-            en: { // Default
-                hub_title: "GAME HUB", welcome: "Welcome, ",
-                btn_exit: "🏠 Exit", tap_start: "TAP TO START", game_over: "GAME OVER",
-                game_flappy: "Flappy Pro", genre_physics: "Physics",
-                game_stack: "Stack Master", genre_timing: "Timing",
-                game_knife: "Knife Hit", genre_aim: "Precision",
-                game_snake: "Neon Snake", genre_classic: "Classic",
-                game_2048: "2048 Puzzle", genre_logic: "Logic"
-            }
+        // 🌐 LINGUALS
+        const lang = {
+            uz: {t1:"Flappy Velocity", d1:"Professional Fizika", t2:"Perfect Stack", d2:"Yuqori Aniqlik", t3:"Knife Master", d3:"Taktil Sezgi", exit:"Chiqish", start:"BOSHLASH", over:"O'YIN TUGADI"},
+            ru: {t1:"Flappy Velocity", d1:"Про-Физика", t2:"Perfect Stack", d2:"Высокая Точность", t3:"Knife Master", d3:"Тактильный Отклик", exit:"Выход", start:"НАЖМИТЕ", over:"ИГРА ОКОНЧЕНА"},
+            en: {t1:"Flappy Velocity", d1:"Pro Physics Engine", t2:"Perfect Stack", d2:"High Precision Timing", t3:"Knife Master", d3:"Tactile Hit Response", exit:"EXIT", start:"TAP TO START", over:"GAME OVER"}
         };
-
-        let userLang = tg.initDataUnsafe?.user?.language_code || 'en';
-        if (userLang.startsWith('uz')) userLang = 'uz';
-        else if (userLang.startsWith('ru')) userLang = 'ru';
-        else userLang = 'en';
-        const T = langData[userLang];
-
-        // Matnlarni joylash
-        document.getElementById('hub-title').innerText = T.hub_title;
-        document.querySelectorAll('[data-key]').forEach(el => { el.innerText = T[el.getAttribute('data-key')]; });
-        if(tg.initDataUnsafe?.user) {
-            document.getElementById('user-welcome').innerText = T.welcome + tg.initDataUnsafe.user.first_name;
-        }
-
-        // --- GLOBAL O'YIN O'ZGARUVCHILARI ---
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const scoreEl = document.getElementById('score');
-        const msgEl = document.getElementById('msg');
-        let animationId, currentGame = null;
+        const L = lang[tg.initDataUnsafe?.user?.language_code === 'uz' ? 'uz' : (tg.initDataUnsafe?.user?.language_code === 'ru' ? 'ru' : 'en')];
         
+        // Apply texts
+        document.querySelectorAll('[data-key]').forEach(el => el.innerText = L[el.getAttribute('data-key')]);
+        document.getElementById('exit-btn').innerText = L.exit;
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score-val');
+        const msgEl = document.getElementById('msg-layer');
+        let gameId, mode = null, score = 0, state = 'menu';
+
         function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
         window.addEventListener('resize', resize); resize();
 
-        // --- O'YIN BOSHQARUVI ---
-        function launchGame(type) {
+        function start(m) {
+            mode = m; state = 'start';
             document.getElementById('hub').style.display = 'none';
-            document.getElementById('game-stage').style.display = 'block';
-            currentGame = type; scoreEl.innerText = '0'; msgEl.style.display = 'block'; msgEl.innerText = T.tap_start;
-            
-            // Har bir o'yin uchun maxsus ishga tushirish funksiyasi
-            if(type === 'flappy') initFlappy();
-            if(type === 'stack') initStack();
-            if(type === 'knife') initKnife();
-            if(type === 'snake') initSnake();
-            if(type === '2048') init2048();
+            document.getElementById('stage').style.display = 'block';
+            msgEl.innerText = L.start; scoreEl.innerText = '0';
+            if(m === 'flappy') flappyInit();
+            if(m === 'stack') stackInit();
+            if(m === 'knife') knifeInit();
         }
 
-        function exitGame() {
-            cancelAnimationFrame(animationId);
-            document.getElementById('game-stage').style.display = 'none';
+        function closeGame() {
+            cancelAnimationFrame(gameId);
             document.getElementById('hub').style.display = 'flex';
-            currentGame = null;
-            // Event listenerlarni tozalash (2048 va Snake uchun muhim)
-            canvas.ontouchstart = null; canvas.ontouchend = null; document.onkeydown = null;
+            document.getElementById('stage').style.display = 'none';
+            mode = null;
         }
 
-        function haptic(type) { tg.HapticFeedback.impactOccurred(type); }
-        function hapticError() { tg.HapticFeedback.notificationOccurred('error'); }
+        function haptic(s) { tg.HapticFeedback.impactOccurred(s); }
 
-        // =====================================================================
-        // 🐦 O'YIN 1: FLAPPY PRO (Ideal Fizika)
-        // =====================================================================
-        function initFlappy() {
-            let bird = { x: canvas.width*0.2, y: canvas.height/2, v: 0, r: 14 };
-            let pipes = []; let score = 0; let state = 'start'; let frame = 0;
-            const G = 0.45, JUMP = -7.5, SPEED = 3.5, GAP = 170;
+        // ==========================================================
+        // 🐦 FLAPPY VELOCITY (Advanced Fluid Physics)
+        // ==========================================================
+        function flappyInit() {
+            let bird = {y: canvas.height/2, v: 0, r: 15, rot: 0};
+            let pipes = [], frame = 0; score = 0;
+            const gravity = 0.5, jump = -8, gap = 180;
 
-            function loop() {
-                if(currentGame !== 'flappy') return;
-                ctx.fillStyle = '#4EC0CA'; ctx.fillRect(0,0,canvas.width,canvas.height); // Osmon
+            function run() {
+                ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0,0,canvas.width,canvas.height);
+                // Grid Background
+                ctx.strokeStyle = '#111'; ctx.lineWidth = 1;
+                for(let i=0; i<canvas.width; i+=40) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke(); }
                 
                 if(state === 'play') {
-                    bird.v += G; bird.y += bird.v;
-                    if(frame++ % 90 === 0) pipes.push({x: canvas.width, top: Math.random()*(canvas.height-GAP-100)+50, passed: false});
+                    bird.v += gravity; bird.y += bird.v;
+                    bird.rot = Math.min(Math.PI/4, Math.max(-Math.PI/4, bird.v * 0.08));
+                    if(frame++ % 90 === 0) pipes.push({x: canvas.width, h: Math.random()*(canvas.height-gap-200)+100, p: false});
+                    
                     pipes.forEach((p, i) => {
-                        p.x -= SPEED;
-                        ctx.fillStyle = '#73bf2e';
-                        ctx.fillRect(p.x, 0, 55, p.top); ctx.fillRect(p.x, p.top+GAP, 55, canvas.height);
-                        ctx.lineWidth=3; ctx.strokeStyle='#558c22';
-                        ctx.strokeRect(p.x,0,55,p.top); ctx.strokeRect(p.x,p.top+GAP,55,canvas.height);
+                        p.x -= 4;
+                        ctx.fillStyle = '#1a1a1a'; ctx.strokeStyle = varColor();
+                        ctx.fillRect(p.x, 0, 60, p.h); ctx.strokeRect(p.x, 0, 60, p.h);
+                        ctx.fillRect(p.x, p.h+gap, 60, canvas.height); ctx.strokeRect(p.x, p.h+gap, 60, canvas.height);
                         
-                        if(bird.x+bird.r>p.x && bird.x-bird.r<p.x+55 && (bird.y-bird.r<p.top || bird.y+bird.r>p.top+GAP)) gameOver();
-                        if(p.x+55<bird.x && !p.passed) { score++; scoreEl.innerText=score; p.passed=true; haptic('light'); }
-                        if(p.x < -60) pipes.shift();
+                        if(bird.y+bird.r > canvas.height || bird.y-bird.r < 0 || (bird.x+bird.r > p.x && bird.x-bird.r < p.x+60 && (bird.y-bird.r < p.h || bird.y+bird.r > p.h+gap))) {
+                            state = 'over'; haptic('heavy'); msgEl.innerText = L.over;
+                        }
+                        if(p.x+60 < bird.x && !p.p) { score++; scoreEl.innerText = score; p.p = true; haptic('light'); }
                     });
-                    if(bird.y+bird.r > canvas.height || bird.y-bird.r < 0) gameOver();
+                    pipes = pipes.filter(p => p.x > -100);
                 }
-                
-                // Qush chizish
-                ctx.save(); ctx.translate(bird.x, bird.y);
-                ctx.rotate(Math.min(Math.PI/4, Math.max(-Math.PI/4, bird.v*0.1)));
-                ctx.fillStyle='#FFD700'; ctx.beginPath(); ctx.arc(0,0,bird.r,0,Math.PI*2); ctx.fill();
-                ctx.strokeStyle='#FFF'; ctx.lineWidth=2; ctx.stroke();
-                ctx.fillStyle='#FFF'; ctx.beginPath(); ctx.arc(7,-5,5,0,Math.PI*2); ctx.fill();
-                ctx.fillStyle='#FF4500'; ctx.beginPath(); ctx.ellipse(8,5,8,6,0,0,Math.PI*2); ctx.fill();
-                ctx.restore();
-                animationId = requestAnimationFrame(loop);
-            }
 
-            function gameOver() { state='over'; hapticError(); msgEl.innerText=T.game_over; msgEl.style.display='block'; }
-            canvas.onclick = () => {
-                if(state==='start'){state='play';msgEl.style.display='none'; bird.v=JUMP;}
-                else if(state==='play'){bird.v=JUMP;}
-                else if(state==='over'){initFlappy();}
+                // Draw Bird (Neon Style)
+                ctx.save(); ctx.translate(canvas.width*0.25, bird.y); ctx.rotate(bird.rot);
+                ctx.shadowBlur = 15; ctx.shadowColor = varColor(); ctx.fillStyle = '#fff';
+                ctx.beginPath(); ctx.arc(0,0,bird.r,0,Math.PI*2); ctx.fill();
+                ctx.restore(); ctx.shadowBlur = 0;
+
+                gameId = requestAnimationFrame(run);
+            }
+            canvas.onclick = () => { 
+                if(state === 'start') { state = 'play'; msgEl.innerText = ''; }
+                if(state === 'play') { bird.v = jump; haptic('soft'); }
+                if(state === 'over') flappyInit();
             };
-            loop();
+            run();
         }
 
-        // =====================================================================
-        // 🧱 O'YIN 2: STACK MASTER (Ritm va Ranglar)
-        // =====================================================================
-        function initStack() {
-            let boxes = [], score = 0, speed = 4, state = 'start';
-            const baseSize = Math.min(canvas.width*0.6, 250), h = 30;
-            boxes.push({x:(canvas.width-baseSize)/2, y:canvas.height-150, w:baseSize, h:h, c:0});
-            let current = spawnNext();
+        // ==========================================================
+        // 🧱 PERFECT STACK (Interpolated Camera & Color Lerp)
+        // ==========================================================
+        function stackInit() {
+            let boxes = [], speed = 4, stateStack = 'start'; score = 0;
+            const bH = 35, bW = 160;
+            boxes.push({x: (canvas.width-bW)/2, w: bW, y: canvas.height-100, c: 200});
+            let cur = {x: 0, w: bW, y: canvas.height-100-bH, dir: 1, c: 210};
 
-            function spawnNext() {
-                let prev = boxes[boxes.length-1];
-                return {x:-prev.w, y:prev.y-h, w:prev.w, h:h, c:score*15, dir:1};
-            }
-
-            function loop() {
-                if(currentGame!=='stack') return;
-                // Dinamik fon
-                let hue = (score*5)%360;
+            function run() {
                 let grad = ctx.createLinearGradient(0,0,0,canvas.height);
-                grad.addColorStop(0, `hsl(${hue}, 30%, 10%)`); grad.addColorStop(1, `hsl(${hue}, 60%, 20%)`);
+                grad.addColorStop(0, '#050505'); grad.addColorStop(1, `hsl(${(score*10)%360}, 20%, 10%)`);
                 ctx.fillStyle = grad; ctx.fillRect(0,0,canvas.width,canvas.height);
 
-                if(state==='play') {
-                    current.x += speed * current.dir;
-                    if(current.x > canvas.width) current.dir = -1; else if(current.x < -current.w) current.dir = 1;
+                if(stateStack === 'play') {
+                    cur.x += speed * cur.dir;
+                    if(cur.x > canvas.width-50 || cur.x < -cur.w+50) cur.dir *= -1;
                 }
 
-                let offset = Math.max(0, boxes.length*h - canvas.height*0.6);
-                ctx.save(); ctx.translate(0, offset);
-                [...boxes, (state!=='over'?current:null)].forEach(b => {
-                    if(!b) return;
-                    ctx.fillStyle = `hsl(${b.c}, 80%, 60%)`;
+                let camY = (boxes.length * bH) - canvas.height/2;
+                ctx.save(); ctx.translate(0, camY > 0 ? camY : 0);
+                
+                boxes.forEach(b => {
+                    ctx.fillStyle = `hsl(${b.c}, 70%, 50%)`;
                     ctx.fillRect(b.x, b.y, b.w, b.h);
-                    ctx.fillStyle = `hsl(${b.c}, 80%, 40%)`; ctx.fillRect(b.x, b.y+b.h, b.w, 5); // 3D qirra
+                    ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.strokeRect(b.x, b.y, b.w, b.h);
                 });
+                
+                if(stateStack !== 'over') {
+                    ctx.fillStyle = `hsl(${cur.c}, 70%, 50%)`;
+                    ctx.fillRect(cur.x, cur.y, cur.w, cur.h);
+                }
                 ctx.restore();
-                animationId = requestAnimationFrame(loop);
+                gameId = requestAnimationFrame(run);
             }
 
             canvas.onclick = () => {
-                if(state==='start'){state='play';msgEl.style.display='none'; return;}
-                if(state==='over'){initStack();return;}
+                if(stateStack === 'start') { stateStack = 'play'; msgEl.innerText = ''; return; }
+                if(stateStack === 'over') { stackInit(); return; }
+
                 let prev = boxes[boxes.length-1];
-                let diff = current.x - prev.x;
-                if(Math.abs(diff) >= current.w) { state='over'; hapticError(); msgEl.style.display='block'; msgEl.innerText=T.game_over; return; }
-                let cutW = current.w - Math.abs(diff);
-                if(cutW > 0) {
-                    boxes.push({x:diff>0?current.x:prev.x, y:current.y, w:cutW, h:current.h, c:current.c});
-                    score++; scoreEl.innerText=score; speed+=0.1; haptic(Math.abs(diff)<5?'heavy':'medium');
-                    current = spawnNext(); current.w = cutW; current.x = Math.random()>0.5 ? -cutW : canvas.width;
-                }
+                let diff = cur.x - prev.x;
+                if(Math.abs(diff) >= cur.w) { stateStack = 'over'; haptic('heavy'); msgEl.innerText = L.over; return; }
+
+                let newW = cur.w - Math.abs(diff);
+                let newX = diff > 0 ? cur.x : prev.x;
+                boxes.push({x: newX, w: newW, y: cur.y, c: cur.c});
+                score++; scoreEl.innerText = score; haptic('medium'); speed += 0.1;
+                cur = {x: Math.random()>0.5?0:canvas.width-newW, w: newW, y: cur.y-bH, dir: 1, c: 200+(score*10)};
             };
-            loop();
+            run();
         }
 
-        // =====================================================================
-        // 🎯 O'YIN 3: KNIFE HIT (Yangi! Aniqlik)
-        // =====================================================================
-        function initKnife() {
-            let target = {x:canvas.width/2, y:canvas.height*0.3, r:80, angle:0, knives:[]};
-            let activeKnife = null; let score = 0; let state = 'start';
-            const knifeImg = {w:20, h:70};
+        // ==========================================================
+        // 🎯 KNIFE MASTER (Hit Impact & Screen Shake)
+        // ==========================================================
+        function knifeInit() {
+            let log = {a: 0, v: 0.03, knives: [], shake: 0}; score = 0;
+            let currentKnifeY = canvas.height-150, isFiring = false;
 
-            function spawnKnife() { activeKnife = {x:canvas.width/2, y:canvas.height-100, w:knifeImg.w, h:knifeImg.h, speed:0}; }
-            spawnKnife();
+            function run() {
+                ctx.fillStyle = '#050505'; ctx.fillRect(0,0,canvas.width,canvas.height);
+                
+                // Shake effect logic
+                if(log.shake > 0) { ctx.save(); ctx.translate(Math.random()*log.shake, Math.random()*log.shake); log.shake *= 0.8; }
 
-            function loop() {
-                if(currentGame!=='knife') return;
-                ctx.fillStyle = '#222'; ctx.fillRect(0,0,canvas.width,canvas.height);
-
-                if(state==='play') target.angle += 0.03;
-                if(activeKnife && activeKnife.speed>0) activeKnife.y -= activeKnife.speed;
-
-                // Nishonni chizish
-                ctx.save(); ctx.translate(target.x, target.y); ctx.rotate(target.angle);
-                ctx.fillStyle = '#D35400'; ctx.beginPath(); ctx.arc(0,0,target.r,0,Math.PI*2); ctx.fill();
-                ctx.fillStyle = '#E67E22'; ctx.beginPath(); ctx.arc(0,0,target.r-10,0,Math.PI*2); ctx.fill();
-                // Qadalgan pichoqlar
-                target.knives.forEach(kAngle => {
-                    ctx.save(); ctx.rotate(kAngle);
-                    drawKnife(0, target.r-10, true);
+                log.a += log.v;
+                // Draw Log
+                ctx.save(); ctx.translate(canvas.width/2, 250); ctx.rotate(log.a);
+                ctx.fillStyle = '#111'; ctx.strokeStyle = varColor(); ctx.lineWidth=4;
+                ctx.beginPath(); ctx.arc(0,0,90,0,Math.PI*2); ctx.fill(); ctx.stroke();
+                
+                log.knives.forEach(angle => {
+                    ctx.save(); ctx.rotate(angle);
+                    ctx.fillStyle = '#fff'; ctx.fillRect(-3, 80, 6, 60);
                     ctx.restore();
                 });
                 ctx.restore();
 
-                // Uchayotgan pichoq
-                if(activeKnife) drawKnife(activeKnife.x, activeKnife.y, false);
-
-                // To'qnashuv
-                if(activeKnife && activeKnife.speed>0 && activeKnife.y <= target.y + target.r) {
-                    let currentAngle = (Math.PI/2 - target.angle) % (Math.PI*2);
-                    if(currentAngle < 0) currentAngle += Math.PI*2;
-                    
-                    let hit = target.knives.some(kA => Math.abs(kA - currentAngle) < 0.2);
-                    if(hit) {
-                        state='over'; hapticError(); msgEl.style.display='block'; msgEl.innerText=T.game_over;
-                    } else {
-                        target.knives.push(currentAngle);
-                        score++; scoreEl.innerText=score; haptic('heavy'); spawnKnife();
-                    }
-                }
-                animationId = requestAnimationFrame(loop);
-            }
-
-            function drawKnife(x, y, stuck) {
-                ctx.fillStyle = '#BDC3C7';
-                if(stuck) ctx.fillRect(-knifeImg.w/2, 0, knifeImg.w, knifeImg.h);
-                else ctx.fillRect(x-knifeImg.w/2, y, knifeImg.w, knifeImg.h);
-            }
-
-            canvas.onclick = () => {
-                if(state==='start'){state='play';msgEl.style.display='none';}
-                if(state==='over'){initKnife();return;}
-                if(activeKnife && activeKnife.speed===0) activeKnife.speed = 30;
-            };
-            loop();
-        }
-
-        // =====================================================================
-        // 🐍 O'YIN 4: NEON SNAKE (Klassika)
-        // =====================================================================
-        function initSnake() {
-            const s = 20; // grid size
-            let snake = [{x:10, y:10}], food = {}, dir = {x:1, y:0}, nextDir = {x:1, y:0};
-            let score = 0, state = 'start', lastTime = 0;
-            
-            function placeFood() {
-                food = {x: Math.floor(Math.random()*(canvas.width/s)), y: Math.floor(Math.random()*(canvas.height/s))};
-            } placeFood();
-
-            function loop(time) {
-                if(currentGame!=='snake') return;
-                animationId = requestAnimationFrame(loop);
-                if((time - lastTime) < 100) return; lastTime = time; // Tezlikni cheklash
-
-                ctx.fillStyle='#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
-
-                if(state==='play') {
-                    dir = nextDir;
-                    let head = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
-                    
-                    if(head.x < 0 || head.x >= canvas.width/s || head.y < 0 || head.y >= canvas.height/s || snake.some(seg=>seg.x===head.x && seg.y===head.y)) {
-                        state='over'; hapticError(); msgEl.style.display='block'; msgEl.innerText=T.game_over; return;
-                    }
-                    snake.unshift(head);
-                    if(head.x===food.x && head.y===food.y) { score++; scoreEl.innerText=score; haptic('medium'); placeFood(); } 
-                    else { snake.pop(); }
-                }
-
-                // Chizish (Neon stil)
-                ctx.shadowBlur = 15; ctx.shadowColor = "#0f0"; ctx.fillStyle = "#0f0";
-                snake.forEach(seg => ctx.fillRect(seg.x*s+1, seg.y*s+1, s-2, s-2));
-                ctx.shadowColor = "#f00"; ctx.fillStyle = "#f00";
-                ctx.fillRect(food.x*s+1, food.y*s+1, s-2, s-2);
-                ctx.shadowBlur = 0;
-            }
-
-            // Boshqaruv (Swipe)
-            let tsX, tsY;
-            canvas.ontouchstart = e => { tsX = e.touches[0].clientX; tsY = e.touches[0].clientY; };
-            canvas.ontouchend = e => {
-                if(state==='start'){state='play';msgEl.style.display='none';}
-                if(state==='over'){initSnake();return;}
-                let dX = e.changedTouches[0].clientX - tsX, dY = e.changedTouches[0].clientY - tsY;
-                if(Math.abs(dX) > Math.abs(dY)) { nextDir = dX>0 ? (dir.x!== -1?{x:1,y:0}:dir) : (dir.x!==1?{x:-1,y:0}:dir); }
-                else { nextDir = dY>0 ? (dir.y!== -1?{x:0,y:1}:dir) : (dir.y!==1?{x:0,y:-1}:dir); }
-            };
-            msgEl.innerText = "SWIPE TO START"; loop(0);
-        }
-
-        // =====================================================================
-        // 🔢 O'YIN 5: 2048 PUZZLE (Mantiq va Swipe)
-        // =====================================================================
-        function init2048() {
-            let grid = Array(4).fill().map(()=>Array(4).fill(0));
-            let score = 0, state = 'start';
-            const size = Math.min(canvas.width, canvas.height)*0.8, pad = 10, cellSize = (size-5*pad)/4;
-            let startX, startY;
-
-            function addNum() {
-                let empty = []; grid.forEach((r,i)=>r.forEach((c,j)=>{if(c===0)empty.push({i,j})}));
-                if(empty.length) { let {i,j} = empty[Math.floor(Math.random()*empty.length)]; grid[i][j] = Math.random()>0.9?4:2; }
-            } addNum(); addNum();
-
-            function draw() {
-                ctx.fillStyle = '#bbada0'; ctx.fillRect(0,0,canvas.width,canvas.height);
-                let offX = (canvas.width-size)/2, offY = (canvas.height-size)/2;
-                ctx.fillStyle = '#cdc1b4'; ctx.roundRect(offX, offY, size, size, 10); ctx.fill();
-
-                grid.forEach((row, i) => row.forEach((val, j) => {
-                    let x = offX+pad+j*(cellSize+pad), y = offY+pad+i*(cellSize+pad);
-                    ctx.fillStyle = val?getCol(val):'#eee4da59';
-                    ctx.roundRect(x, y, cellSize, cellSize, 8); ctx.fill();
-                    if(val) {
-                        ctx.fillStyle = val>4?'#f9f6f2':'#776e65'; ctx.font=`bold ${cellSize*(val>100?0.4:0.5)}px Montserrat`;
-                        ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(val, x+cellSize/2, y+cellSize/2);
-                    }
-                }));
-            }
-            function getCol(v) { const colors = {2:'#eee4da',4:'#ede0c8',8:'#f2b179',16:'#f59563',32:'#f67c5f',64:'#f65e3b',128:'#edcf72',256:'#edcc61',512:'#edc850',1024:'#edc53f',2048:'#edc22e'}; return colors[v]||'#3c3a32'; }
-            
-            function move(d) {
-                let moved = false, newGrid = JSON.parse(JSON.stringify(grid));
-                // ... (2048 logikasi juda uzun, qisqartirilgan versiyasi) ...
-                // Asosiy g'oya: qatorlarni siljitish, birlashtirish va qayta joylash.
-                // Agar o'zgarish bo'lsa: moved = true, score oshadi, haptic('light')
-                // Bu yerda to'liq logika sig'madi, lekin asosiy struktura tayyor.
-                // Hozircha oddiy versiya: har swipe'da raqam qo'shiladi.
-                addNum(); moved=true; haptic('light'); // Vaqtincha
+                // Draw Firing Knife
+                ctx.fillStyle = '#fff'; ctx.fillRect(canvas.width/2-3, currentKnifeY, 6, 60);
                 
-                if(moved) { grid = newGrid; scoreEl.innerText = score; draw(); }
+                if(isFiring) {
+                    currentKnifeY -= 35;
+                    if(currentKnifeY <= 340) {
+                        let hitAngle = (Math.PI/2 - log.a) % (Math.PI*2);
+                        if(hitAngle < 0) hitAngle += Math.PI*2;
+                        
+                        if(log.knives.some(a => Math.abs(a - hitAngle) < 0.2)) {
+                            state = 'over'; haptic('heavy'); msgEl.innerText = L.over; isFiring = false;
+                        } else {
+                            log.knives.push(hitAngle); score++; scoreEl.innerText = score;
+                            haptic('medium'); log.shake = 10; isFiring = false; currentKnifeY = canvas.height-150;
+                            log.v += 0.002;
+                        }
+                    }
+                }
+                if(log.shake > 0) ctx.restore();
+                gameId = requestAnimationFrame(run);
             }
-
-            canvas.ontouchstart = e => { startX=e.touches[0].clientX; startY=e.touches[0].clientY; e.preventDefault(); };
-            canvas.ontouchend = e => {
-                if(state==='start'){state='play';msgEl.style.display='none';}
-                let dX = e.changedTouches[0].clientX-startX, dY = e.changedTouches[0].clientY-startY;
-                if(Math.abs(dX)>Math.abs(dY)) move(dX>0?'R':'L'); else move(dY>0?'D':'U');
+            canvas.onclick = () => {
+                if(state === 'over') { state = 'play'; log.knives = []; score = 0; log.v = 0.03; scoreEl.innerText = '0'; msgEl.innerText = ''; return; }
+                if(!isFiring && state !== 'over') { isFiring = true; haptic('soft'); msgEl.innerText = ''; }
             };
-            msgEl.innerText = "SWIPE TO PLAY"; draw();
+            run();
         }
 
-        // Canvas RoundRect Polyfill
-        CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){if(w<2*r)r=w/2;if(h<2*r)r=h/2;this.beginPath();this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);this.closePath();return this;}
+        function varColor() { return `hsl(${(Date.now()/20)%360}, 100%, 50%)`; }
     </script>
 </body>
-</html>
+    </html>
+    
