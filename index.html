@@ -137,6 +137,26 @@ ctx.lineTo(cow.x + 22, cow.y - 8);
 ctx.closePath();
 ctx.fill();
 
+// Ears
+ctx.fillStyle = "white";
+ctx.fillRect(cow.x - 6, cow.y + 10, 6, 10);
+ctx.fillRect(cow.x + cow.w, cow.y + 10, 6, 10);
+
+// Horns
+ctx.fillStyle = "#f5deb3";
+ctx.fillRect(cow.x + 6, cow.y - 6, 6, 6);
+ctx.fillRect(cow.x + cow.w - 12, cow.y - 6, 6, 6);
+
+// Bigger blonde hair
+ctx.fillStyle = "#F6D365";
+ctx.beginPath();
+ctx.moveTo(cow.x + 4, cow.y);
+ctx.lineTo(cow.x + cow.w - 4, cow.y);
+ctx.lineTo(cow.x + cow.w - 10, cow.y - 10);
+ctx.lineTo(cow.x + 12, cow.y - 6);
+ctx.closePath();
+ctx.fill();
+  
   // Pipes
   ctx.fillStyle = "#22c55e";
   pipes.forEach(p => {
