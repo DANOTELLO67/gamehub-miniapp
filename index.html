@@ -13,7 +13,10 @@ body {
 canvas {
   display:block;
   margin:auto;
-  background:#020617;
+}
+button {
+  padding:10px 16px;
+  font-size:14px;
 }
 </style>
 </head>
@@ -27,23 +30,31 @@ Telegram.WebApp.ready();
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-// ================= GLOBAL STATE =================
-let screen = "menu"; // menu | game | result | leaderboard
+// ================= GLOBAL SCREEN =================
+let screen = "menu"; // menu | game | result | leaderboard | monetization
 
-// ================= PLAYER =================
-let playerName = Telegram.WebApp.initDataUnsafe?.user?.first_name || "Player";
+// ================= USER =================
+const tgUser = Telegram.WebApp.initDataUnsafe?.user;
+const playerName = tgUser?.first_name || "Player";
+const playerId = tgUser?.id || "local";
 
-// ================= LEADERBOARD (LOCAL) =================
+// ================= LEADERBOARD (SERVER READY) =================
 let leaderboard = JSON.parse(localStorage.getItem("leaderboard") || "[]");
 
 // ================= GAME STATE =================
 let score = 0;
 let bestScore = Number(localStorage.getItem("bestScore")) || 0;
 
-// ================= COW =================
-const cow = { x:80, y:300, w:40, h:40, vy:0 };
+// ================= COW (KICHRAYTIRILGAN) =================
+const cow = {
+  x: 80,
+  y: 300,
+  w: 34,
+  h: 34,
+  vy: 0
+};
 
-// ================= PHYSICS (SEN YOQQAN) =================
+// ================= PHYSICS =================
 const FIXED_DT = 1/120;
 const GRAVITY = 2200;
 const JUMP = -520;
@@ -59,14 +70,16 @@ let lastTime = 0;
 let acc = 0;
 let inputTimer = 0;
 
-// ================= UTIL =================
+// ================= HELPERS =================
 function randY(){ return Math.random()*260+60; }
 
 function resetGame(){
-  score=0;
-  cow.y=300; cow.vy=0;
-  PIPE_SPEED=160; PIPE_GAP=150;
-  pipes=[{x:360,y:randY(),passed:false}];
+  score = 0;
+  cow.y = 300;
+  cow.vy = 0;
+  PIPE_SPEED = 160;
+  PIPE_GAP = 150;
+  pipes = [{ x:360, y:randY(), passed:false }];
 }
 
 // ================= INPUT =================
@@ -75,132 +88,131 @@ canvas.addEventListener("touchstart", handleTap);
 
 function handleTap(){
   if(screen==="menu"){ screen="game"; resetGame(); cow.vy=JUMP; return; }
-  if(screen==="game"){ inputTimer=INPUT_BUFFER; return; }
+  if(screen==="game"){ inputTimer = INPUT_BUFFER; return; }
   if(screen==="result"){ screen="leaderboard"; return; }
-  if(screen==="leaderboard"){ screen="menu"; }
+  if(screen==="leaderboard"){ screen="menu"; return; }
 }
 
-// ================= UPDATE GAME =================
+// ================= GAME UPDATE =================
 function updateGame(dt){
-  cow.vy += GRAVITY*dt;
+  cow.vy += GRAVITY * dt;
   cow.vy = Math.min(cow.vy, MAX_FALL);
   cow.vy *= DAMPING;
-  cow.y += cow.vy*dt;
+  cow.y += cow.vy * dt;
 
-  if(cow.y<0 || cow.y+cow.h>640){ endGame(); return; }
+  if(cow.y < 0 || cow.y + cow.h > 640){
+    endGame();
+    return;
+  }
 
   pipes.forEach(p=>{
-    p.x -= PIPE_SPEED*dt;
+    p.x -= PIPE_SPEED * dt;
 
-    if(!p.passed && p.x+50<cow.x){
-      p.passed=true;
+    if(!p.passed && p.x + 50 < cow.x){
+      p.passed = true;
       score++;
-      PIPE_SPEED+=1.5;
-      PIPE_GAP=Math.max(120,PIPE_GAP-0.8);
+      PIPE_SPEED += 1.2;
+      PIPE_GAP = Math.max(120, PIPE_GAP - 0.7);
     }
 
-    const hx=cow.x+4, hy=cow.y+4, hw=cow.w-8, hh=cow.h-8;
-    if(hx<p.x+50 && hx+hw>p.x && (hy<p.y || hy+hh>p.y+PIPE_GAP)){
+    const hx = cow.x + 4, hy = cow.y + 4;
+    const hw = cow.w - 8, hh = cow.h - 8;
+
+    if(hx < p.x + 50 && hx + hw > p.x &&
+      (hy < p.y || hy + hh > p.y + PIPE_GAP)){
       endGame();
     }
   });
 
-  if(pipes[pipes.length-1].x<180){
-    pipes.push({x:360,y:randY(),passed:false});
+  if(pipes[pipes.length-1].x < 180){
+    pipes.push({ x:360, y:randY(), passed:false });
   }
-  if(pipes[0].x<-60) pipes.shift();
+  if(pipes[0].x < -60) pipes.shift();
 }
 
 function endGame(){
-  screen="result";
-  if(score>bestScore){
-    bestScore=score;
-    localStorage.setItem("bestScore",bestScore);
+  screen = "result";
+  if(score > bestScore){
+    bestScore = score;
+    localStorage.setItem("bestScore", bestScore);
   }
-  leaderboard.push({name:playerName,score});
+
+  leaderboard.push({ id:playerId, name:playerName, score });
   leaderboard.sort((a,b)=>b.score-a.score);
-  leaderboard=leaderboard.slice(0,10);
-  localStorage.setItem("leaderboard",JSON.stringify(leaderboard));
+  leaderboard = leaderboard.slice(0,10);
+  localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
 }
 
 // ================= DRAW =================
-function draw(){
-  ctx.clearRect(0,0,360,640);
-
-  // BACKGROUND
-  const g=ctx.createLinearGradient(0,0,0,640);
+function drawBackground(){
+  const g = ctx.createLinearGradient(0,0,0,640);
   g.addColorStop(0,"#020617");
   g.addColorStop(1,"#0f172a");
-  ctx.fillStyle=g;
+  ctx.fillStyle = g;
   ctx.fillRect(0,0,360,640);
-
-  if(screen==="menu") drawMenu();
-  if(screen==="game") drawGame();
-  if(screen==="result") drawResult();
-  if(screen==="leaderboard") drawLeaderboard();
 }
 
-function drawMenu(){
+function drawCow(){
   ctx.fillStyle="white";
-  ctx.font="26px Arial";
-  ctx.textAlign="center";
-  ctx.fillText("🎮 GameHub",180,240);
-  ctx.font="18px Arial";
-  ctx.fillText("Flying Cow",180,280);
-  ctx.fillText("Tap to Play",180,330);
-}
+  ctx.fillRect(cow.x, cow.y, cow.w, cow.h);
 
-function drawGame(){
-  // cow
-  ctx.fillStyle="white";
-  ctx.fillRect(cow.x,cow.y,cow.w,cow.h);
   ctx.fillStyle="black";
-  ctx.fillRect(cow.x+12,cow.y+14,3,3);
-  ctx.fillRect(cow.x+25,cow.y+14,3,3);
-  ctx.fillRect(cow.x+18,cow.y+24,4,2);
+  ctx.fillRect(cow.x+10, cow.y+12, 3, 3);
+  ctx.fillRect(cow.x+21, cow.y+12, 3, 3);
+  ctx.fillRect(cow.x+15, cow.y+21, 4, 2);
+
   ctx.fillStyle="#F6D365";
   ctx.beginPath();
-  ctx.moveTo(cow.x+14,cow.y);
-  ctx.lineTo(cow.x+20,cow.y-6);
-  ctx.lineTo(cow.x+26,cow.y);
+  ctx.moveTo(cow.x+12, cow.y);
+  ctx.lineTo(cow.x+17, cow.y-5);
+  ctx.lineTo(cow.x+22, cow.y);
   ctx.fill();
+}
 
-  // pipes
+function drawPipes(){
   ctx.fillStyle="#22c55e";
   pipes.forEach(p=>{
     ctx.fillRect(p.x,0,50,p.y);
     ctx.fillRect(p.x,p.y+PIPE_GAP,50,640);
   });
+}
 
+function drawUI(){
   ctx.fillStyle="white";
-  ctx.font="20px Arial";
+  ctx.font="18px Arial";
   ctx.textAlign="left";
   ctx.fillText("Score: "+score,10,28);
+  ctx.fillText("Best: "+bestScore,10,50);
+
+  ctx.textAlign="center";
+  if(screen==="menu"){
+    ctx.font="26px Arial";
+    ctx.fillText("🐮 Flying Cow",180,260);
+    ctx.font="18px Arial";
+    ctx.fillText("Tap to Play",180,310);
+  }
+  if(screen==="result"){
+    ctx.font="24px Arial";
+    ctx.fillText("Game Over",180,260);
+    ctx.font="18px Arial";
+    ctx.fillText("Score: "+score,180,300);
+    ctx.fillText("Tap to Leaderboard",180,340);
+  }
+  if(screen==="leaderboard"){
+    ctx.font="22px Arial";
+    ctx.fillText("🏆 Leaderboard",180,90);
+    ctx.font="16px Arial";
+    leaderboard.forEach((p,i)=>{
+      ctx.fillText(`${i+1}. ${p.name} – ${p.score}`,180,130+i*26);
+    });
+    ctx.fillText("Tap to Menu",180,520);
+  }
 }
 
-function drawResult(){
-  ctx.fillStyle="white";
-  ctx.font="24px Arial";
-  ctx.textAlign="center";
-  ctx.fillText("Game Over",180,260);
-  ctx.font="18px Arial";
-  ctx.fillText("Score: "+score,180,300);
-  ctx.fillText("Best: "+bestScore,180,330);
-  ctx.fillText("Tap to Leaderboard",180,380);
-}
-
-function drawLeaderboard(){
-  ctx.fillStyle="white";
-  ctx.font="22px Arial";
-  ctx.textAlign="center";
-  ctx.fillText("🏆 Leaderboard",180,80);
-
-  ctx.font="16px Arial";
-  leaderboard.forEach((p,i)=>{
-    ctx.fillText(`${i+1}. ${p.name} – ${p.score}`,180,130+i*26);
-  });
-
-  ctx.fillText("Tap to Menu",180,520);
+function draw(){
+  drawBackground();
+  if(screen==="game") drawCow(), drawPipes();
+  drawUI();
 }
 
 // ================= LOOP =================
