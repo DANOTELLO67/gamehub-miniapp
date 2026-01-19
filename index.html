@@ -3,552 +3,545 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FLAPPY ULTRA</title>
+    <title>IRON STORM: DESERT OPS</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-
-        body {
-            margin: 0;
-            padding: 0;
-            background: #333;
-            overflow: hidden;
-            touch-action: none; /* Mobilda scrollni bloklash */
-            font-family: 'Press Start 2P', cursive;
-        }
-
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
-
-        /* UI Qatlami */
+        body { margin: 0; overflow: hidden; background: #e0cda7; font-family: 'Courier New', monospace; user-select: none; }
+        canvas { display: block; }
+        
         #ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
+        }
+        
+        #hud-panel {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(40, 45, 30, 0.8); border: 2px solid #5a6645;
+            padding: 15px; color: #d0d0c0; border-radius: 4px;
+        }
+        
+        .stat-row { display: flex; align-items: center; margin-bottom: 5px; }
+        .stat-label { width: 80px; font-weight: bold; }
+        .bar-container { width: 150px; height: 10px; background: #222; border: 1px solid #444; }
+        #hp-bar { width: 100%; height: 100%; background: #6b8c42; transition: width 0.2s; }
+        #reload-bar { width: 100%; height: 100%; background: #d4a017; transition: width 0.1s; }
+        
+        #score-display {
+            position: absolute; top: 20px; right: 20px;
+            font-size: 30px; font-weight: 900; color: #3b362a;
+            text-shadow: 2px 2px 0px rgba(255,255,255,0.5);
         }
 
-        .title {
-            font-size: 40px;
-            color: #fff;
-            text-shadow: 4px 4px 0 #000;
-            margin-bottom: 20px;
-            animation: float 2s infinite ease-in-out;
+        #game-over {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); pointer-events: auto;
+            justify-content: center; align-items: center; flex-direction: column;
         }
-
-        .score-big {
-            position: absolute;
-            top: 10%;
-            font-size: 60px;
-            color: #fff;
-            text-shadow: 3px 3px 0 #000;
-            z-index: 10;
-        }
-
-        #start-screen, #game-over-screen {
-            background: rgba(0, 0, 0, 0.7);
-            padding: 30px;
-            border-radius: 15px;
-            border: 4px solid #fff;
-            pointer-events: auto; /* Tugmalar ishlashi uchun */
-        }
-
+        h1 { color: #fff; font-size: 50px; text-transform: uppercase; margin: 0 0 20px 0; letter-spacing: 5px; }
         button {
-            background: #f4ce42;
-            border: 2px solid #000;
-            box-shadow: 4px 4px 0 #000;
-            color: #000;
-            font-family: 'Press Start 2P', cursive;
-            font-size: 16px;
-            padding: 15px 30px;
-            cursor: pointer;
-            margin-top: 20px;
-            transition: transform 0.1s;
+            background: #6b8c42; border: 2px solid #fff; color: white;
+            padding: 15px 40px; font-size: 20px; cursor: pointer; text-transform: uppercase; font-weight: bold;
         }
-
-        button:active {
-            transform: translate(2px, 2px);
-            box-shadow: 2px 2px 0 #000;
+        button:hover { background: #5a7535; }
+        
+        /* Mobile Controls */
+        .joystick {
+            position: absolute; bottom: 50px; width: 120px; height: 120px;
+            background: rgba(0,0,0,0.1); border: 2px dashed #5a6645; border-radius: 50%;
+            pointer-events: auto; display: none;
         }
-
-        .hidden { display: none !important; }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+        .stick {
+            position: absolute; top: 50%; left: 50%; width: 50px; height: 50px;
+            background: rgba(90, 102, 69, 0.8); border-radius: 50%;
+            transform: translate(-50%, -50%);
         }
+        #joy-move { left: 40px; }
+        #joy-aim { right: 40px; }
     </style>
 </head>
 <body>
 
-    <canvas id="gameCanvas"></canvas>
-
     <div id="ui-layer">
-        <div id="score-display" class="score-big hidden">0</div>
-
-        <div id="start-screen">
-            <div class="title">FLAPPY<br>ULTRA</div>
-            <p style="color:#ddd; font-size:12px; line-height:1.5;">
-                SPACE yoki EKRANGA BOS<br>
-                ENG YAXSHI NATIJA: <span id="best-score-start">0</span>
-            </p>
-            <button id="start-btn">O'YINNI BOSHLASH</button>
-        </div>
-
-        <div id="game-over-screen" class="hidden">
-            <div class="title" style="color:#ff4444;">GAME OVER</div>
-            <div style="background:#ddedf3; padding:15px; border:2px solid #000; border-radius:5px; margin-bottom:10px;">
-                <p style="color:#e86101; margin:5px;">SCORE</p>
-                <p id="final-score" style="font-size:24px; color:#000; margin:5px;">0</p>
-                <hr style="border:1px dashed #aaa;">
-                <p style="color:#e86101; margin:5px;">BEST</p>
-                <p id="best-score-end" style="font-size:24px; color:#000; margin:5px;">0</p>
-                <div id="new-record" class="hidden" style="color:red; font-size:10px; margin-top:5px;">YANGI REKORD!</div>
+        <div id="hud-panel">
+            <div class="stat-row">
+                <span class="stat-label">ARMOR</span>
+                <div class="bar-container"><div id="hp-bar"></div></div>
             </div>
-            <button id="restart-btn">QAYTA O'YNASH</button>
+            <div class="stat-row">
+                <span class="stat-label">LOAD</span>
+                <div class="bar-container"><div id="reload-bar"></div></div>
+            </div>
+            <div style="font-size: 12px; margin-top: 5px; color: #aaa;">WASD: Move | MOUSE: Aim/Shoot</div>
+        </div>
+        <div id="score-display">KILLS: <span id="score">0</span></div>
+        
+        <div id="joy-move" class="joystick"><div class="stick"></div></div>
+        <div id="joy-aim" class="joystick"><div class="stick"></div></div>
+
+        <div id="game-over">
+            <h1>Mission Failed</h1>
+            <p style="color:#ddd; font-size: 20px; margin-bottom: 30px;">Tank Destroyed. Kills: <span id="final-score">0</span></p>
+            <button onclick="location.reload()">Re-Deploy</button>
         </div>
     </div>
 
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+    <canvas id="groundCanvas"></canvas> <canvas id="gameCanvas"></canvas>   <script>
+    // --- TIZIM ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const groundCanvas = document.getElementById('groundCanvas');
+    const gCtx = groundCanvas.getContext('2d');
 
-        // --- AUDIO TIZIMI (Web Audio API) ---
-        // Fayl yuklamaslik uchun tovushlarni kodda sintez qilamiz
-        const AudioSys = {
-            ctx: new (window.AudioContext || window.webkitAudioContext)(),
-            playTone: function(freq, type, duration, vol=0.1) {
-                if(this.ctx.state === 'suspended') this.ctx.resume();
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = type;
-                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-                gain.gain.setValueAtTime(vol, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start();
-                osc.stop(this.ctx.currentTime + duration);
-            },
-            jump: function() { this.playTone(400, 'square', 0.1, 0.1); },
-            score: function() { this.playTone(1000, 'sine', 0.2, 0.1); },
-            hit: function() { this.playTone(100, 'sawtooth', 0.3, 0.2); }
-        };
+    const IS_MOBILE = /Android|iPhone|iPad/i.test(navigator.userAgent);
+    if(IS_MOBILE) {
+        document.querySelectorAll('.joystick').forEach(j => j.style.display = 'block');
+        document.querySelector('#hud-panel div:last-child').style.display = 'none';
+    }
 
-        // --- O'YIN SOZLAMALARI ---
-        let frames = 0;
-        const DEGREE = Math.PI / 180;
-        let state = { current: 0, getReady: 0, game: 1, over: 2 };
-        let score = { value: 0, best: localStorage.getItem('flappy_best') || 0 };
-        let shake = 0; // Screen shake
-
-        // Ekranni moslashtirish
-        function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        groundCanvas.width = window.innerWidth;
+        groundCanvas.height = window.innerHeight;
+        // Orqa fon (Qum)
+        gCtx.fillStyle = "#e0cda7";
+        gCtx.fillRect(0, 0, groundCanvas.width, groundCanvas.height);
+        // Qum teksturasi (Noise)
+        for(let i=0; i<5000; i++) {
+            gCtx.fillStyle = "rgba(0,0,0,0.05)";
+            gCtx.fillRect(Math.random()*groundCanvas.width, Math.random()*groundCanvas.height, 2, 2);
         }
-        window.addEventListener('resize', resize);
-        resize();
+    }
+    window.addEventListener('resize', resize);
+    resize();
 
-        // --- GRAFIK AKTIVLAR (Procedural) ---
-        
-        // 1. FON (Parallax)
-        const bg = {
-            draw: function() {
-                // Osmon
-                let gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-                gradient.addColorStop(0, "#70c5ce");
-                gradient.addColorStop(1, "#fff");
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                // Bulutlar (Sekin)
-                ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-                for(let i=0; i<5; i++) {
-                    let x = ((frames * 0.5) + (i * 300)) % (canvas.width + 200) - 100;
-                    let y = canvas.height - 150 - (i % 2) * 100;
-                    ctx.beginPath();
-                    ctx.arc(x, y, 40, 0, Math.PI * 2);
-                    ctx.arc(x+30, y-10, 50, 0, Math.PI * 2);
-                    ctx.arc(x+60, y, 40, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-
-                // Shahar silueti (O'rta)
-                ctx.fillStyle = "#a3e0c3";
-                const buildingWidth = 60;
-                const offset = (frames * 1) % buildingWidth;
-                for(let i = -1; i < canvas.width / buildingWidth + 1; i++) {
-                    let h = 100 + Math.sin(i * 132) * 50;
-                    ctx.fillRect(i * buildingWidth - offset, canvas.height - 120 - h, buildingWidth + 1, h);
-                }
-            }
-        };
-
-        // 2. YER (Tez harakatlanadi)
-        const fg = {
-            h: 120,
-            draw: function() {
-                ctx.fillStyle = "#ded895";
-                ctx.fillRect(0, canvas.height - this.h, canvas.width, this.h);
-                
-                // Chim
-                ctx.fillStyle = "#73bf2e";
-                ctx.fillRect(0, canvas.height - this.h, canvas.width, 15);
-                ctx.strokeStyle = "#5a9e1e";
-                ctx.beginPath();
-                ctx.moveTo(0, canvas.height - this.h + 15);
-                ctx.lineTo(canvas.width, canvas.height - this.h + 15);
-                ctx.stroke();
-
-                // Chiziqlar (Harakat effekti)
-                ctx.fillStyle = "#cbb968";
-                const speed = state.current == state.game ? 3 : 0;
-                const offset = (frames * speed) % 20;
-                for(let i = -1; i < canvas.width / 20 + 1; i++) {
-                    ctx.beginPath();
-                    ctx.moveTo(i * 20 - offset, canvas.height - this.h + 5);
-                    ctx.lineTo(i * 20 - 10 - offset, canvas.height - this.h + 25);
-                    ctx.lineTo(i * 20 - 5 - offset, canvas.height - this.h + 25);
-                    ctx.lineTo(i * 20 + 5 - offset, canvas.height - this.h + 5);
-                    ctx.fill();
-                }
-            }
-        };
-
-        // 3. QUSH (Vektor)
-        const bird = {
-            x: 50,
-            y: 150,
-            w: 34,
-            h: 24,
-            radius: 12,
-            frame: 0,
-            gravity: 0.25,
-            jump: 4.6,
-            speed: 0,
-            rotation: 0,
+    // --- AUDIO TIZIMI (Heavy Military Sounds) ---
+    const AudioSys = {
+        ctx: new (window.AudioContext || window.webkitAudioContext)(),
+        explosion: function() {
+            if(this.ctx.state === 'suspended') this.ctx.resume();
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            const filter = this.ctx.createBiquadFilter();
             
-            draw: function() {
-                let birdY = this.y;
-                // Get Ready holatida tebranish
-                if(state.current == state.getReady) {
-                    birdY += Math.cos(frames/10) * 5;
-                }
-
-                ctx.save();
-                ctx.translate(this.x, birdY);
-                
-                // Aylanish fizikasi
-                if(state.current == state.game) {
-                    if(this.speed < this.jump/2) this.rotation = -25 * DEGREE;
-                    else {
-                        this.rotation += 2 * DEGREE;
-                        this.rotation = Math.min(this.rotation, 90 * DEGREE);
-                    }
-                } else {
-                    this.rotation = 0;
-                }
-                ctx.rotate(this.rotation);
-
-                // Tana
-                ctx.fillStyle = "#f4ce42"; // Sariq
-                ctx.beginPath();
-                ctx.ellipse(0, 0, this.radius+5, this.radius, 0, 0, Math.PI*2);
-                ctx.fill();
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = "#000";
-                ctx.stroke();
-
-                // Ko'z
-                ctx.fillStyle = "#fff";
-                ctx.beginPath();
-                ctx.arc(6, -6, 8, 0, Math.PI*2);
-                ctx.fill();
-                ctx.stroke();
-                ctx.fillStyle = "#000"; // Qorachiq
-                ctx.beginPath();
-                ctx.arc(8, -6, 2, 0, Math.PI*2);
-                ctx.fill();
-
-                // Tumshuq
-                ctx.fillStyle = "#e86101";
-                ctx.beginPath();
-                ctx.moveTo(8, 2);
-                ctx.lineTo(16, 6);
-                ctx.lineTo(8, 10);
-                ctx.fill();
-                ctx.stroke();
-
-                // Qanot (Harakatlanadi)
-                ctx.fillStyle = "#fff";
-                const flap = state.current == state.game ? Math.sin(frames * 0.5) * 5 : 0;
-                ctx.beginPath();
-                ctx.ellipse(-5, 5 + flap, 8, 5, 0, 0, Math.PI*2);
-                ctx.fill();
-                ctx.stroke();
-
-                ctx.restore();
-            },
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(50, this.ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(10, this.ctx.currentTime + 0.5);
             
-            flap: function() {
-                this.speed = -this.jump;
-                // Partikllar (patlar) chiqarish
-                particles.spawn(this.x, this.y, "#fff", 3);
-            },
-            
-            update: function() {
-                // Fizika (O'yin paytida)
-                if(state.current == state.game) {
-                    this.speed += this.gravity;
-                    this.y += this.speed;
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(200, this.ctx.currentTime);
+            filter.frequency.linearRampToValueAtTime(50, this.ctx.currentTime + 0.5);
 
-                    // Yerga urilish
-                    if(this.y + this.h/2 >= canvas.height - fg.h) {
-                        this.y = canvas.height - fg.h - this.h/2;
-                        gameOver();
-                    }
-                    
-                    // Shiftga urilish
-                    if(this.y < 0) this.y = 0;
-                }
-            },
-            reset: function() {
-                this.y = canvas.height / 2;
-                this.speed = 0;
-                this.rotation = 0;
-                this.x = canvas.width / 4; // Mobilga moslashish
-            }
-        };
+            gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
 
-        // 4. QUVURLAR
-        const pipes = {
-            position: [],
-            w: 60, // Quvur kengligi
-            h: 0,  // O'zgaruvchan
-            gap: 120, // Teshik kattaligi
-            dx: 3, // Tezlik (Dinamik o'sadi)
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(); osc.stop(this.ctx.currentTime + 0.5);
+        },
+        shoot: function() {
+            if(this.ctx.state === 'suspended') this.ctx.resume();
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(50, this.ctx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(); osc.stop(this.ctx.currentTime + 0.1);
+        }
+    };
 
-            draw: function() {
-                for(let i=0; i<this.position.length; i++) {
-                    let p = this.position[i];
-                    let topY = p.y;
-                    let bottomY = p.y + this.gap;
+    // --- KAMERA (Screen Shake) ---
+    const camera = { x: 0, y: 0, shake: 0 };
 
-                    // Gradient effekti (3D Quvur)
-                    let grad = ctx.createLinearGradient(p.x, 0, p.x + this.w, 0);
-                    grad.addColorStop(0, "#558022");
-                    grad.addColorStop(0.5, "#73bf2e");
-                    grad.addColorStop(1, "#558022");
-                    ctx.fillStyle = grad;
-                    
-                    // Chegara
-                    ctx.strokeStyle = "#000";
-                    ctx.lineWidth = 2;
-
-                    // Tepdagi quvur
-                    ctx.fillRect(p.x, 0, this.w, topY);
-                    ctx.strokeRect(p.x, 0, this.w, topY);
-                    // Qopqog'i
-                    ctx.fillRect(p.x - 2, topY - 20, this.w + 4, 20);
-                    ctx.strokeRect(p.x - 2, topY - 20, this.w + 4, 20);
-
-                    // Pastki quvur
-                    ctx.fillRect(p.x, bottomY, this.w, canvas.height - fg.h - bottomY);
-                    ctx.strokeRect(p.x, bottomY, this.w, canvas.height - fg.h - bottomY);
-                    // Qopqog'i
-                    ctx.fillRect(p.x - 2, bottomY, this.w + 4, 20);
-                    ctx.strokeRect(p.x - 2, bottomY, this.w + 4, 20);
-                }
-            },
-
-            update: function() {
-                if(state.current !== state.game) return;
-
-                // Har 100 kadrda yangi quvur
-                if(frames % 100 == 0) {
-                    // Balandlikni hisoblash (Murakkabroq)
-                    const min = canvas.height * 0.1;
-                    const max = canvas.height - fg.h - this.gap - min;
-                    this.position.push({
-                        x: canvas.width,
-                        y: Math.random() * (max - min) + min,
-                        passed: false
-                    });
-                }
-
-                for(let i=0; i<this.position.length; i++) {
-                    let p = this.position[i];
-                    p.x -= this.dx;
-
-                    // To'qnashuv (Collision) - Eng muhim qism
-                    let birdLeft = bird.x - bird.radius + 5; // Hitbox biroz kichikroq (fair play)
-                    let birdRight = bird.x + bird.radius - 5;
-                    let birdTop = bird.y - bird.radius + 5;
-                    let birdBottom = bird.y + bird.radius - 5;
-
-                    let pipeLeft = p.x;
-                    let pipeRight = p.x + this.w;
-                    let topPipeBottom = p.y;
-                    let bottomPipeTop = p.y + this.gap;
-
-                    // Quvur ichidami?
-                    if(birdRight > pipeLeft && birdLeft < pipeRight) {
-                        // Tepa yoki pastga tegdimi?
-                        if(birdTop < topPipeBottom || birdBottom > bottomPipeTop) {
-                            gameOver();
-                        }
-                    }
-
-                    // Ochko olish
-                    if(p.x + this.w < bird.x && !p.passed) {
-                        score.value += 1;
-                        p.passed = true;
-                        AudioSys.score();
-                        
-                        // Qiyinlashish: Har 5 ochkoda tezlik oshadi
-                        if(score.value % 5 == 0) this.dx += 0.2;
-                    }
-
-                    // O'chirish
-                    if(p.x + this.w <= 0) {
-                        this.position.shift();
-                        i--; // Array buzilmasligi uchun
-                    }
-                }
-            },
-            reset: function() {
-                this.position = [];
-                this.dx = 3;
-            }
-        };
-
-        // 5. PARTIKLLAR (Effektlar)
-        const particles = {
-            data: [],
-            spawn: function(x, y, color, count) {
-                for(let i=0; i<count; i++) {
-                    this.data.push({
-                        x: x, y: y,
-                        vx: (Math.random() - 0.5) * 5,
-                        vy: (Math.random() - 0.5) * 5,
-                        life: 1.0,
-                        color: color
-                    });
-                }
-            },
-            draw: function() {
-                for(let i=this.data.length-1; i>=0; i--) {
-                    let p = this.data[i];
-                    p.x += p.vx;
-                    p.y += p.vy;
-                    p.vy += 0.2; // Gravity
-                    p.life -= 0.05;
-
-                    if(p.life <= 0) {
-                        this.data.splice(i, 1);
-                        continue;
-                    }
-
-                    ctx.globalAlpha = p.life;
-                    ctx.fillStyle = p.color;
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
-                    ctx.fill();
-                    ctx.globalAlpha = 1.0;
-                }
-            },
-            reset: function() { this.data = []; }
-        };
-
-        // --- O'YIN LOGIKASI ---
-
-        function gameOver() {
-            state.current = state.over;
-            shake = 20; // Ekran titrashi
-            AudioSys.hit();
-            particles.spawn(bird.x, bird.y, "#e86101", 20); // Portlash
-            
-            // UI yangilash
-            const isBest = score.value > score.best;
-            if(isBest) {
-                score.best = score.value;
-                localStorage.setItem('flappy_best', score.best);
-            }
-            
-            document.getElementById('final-score').innerText = score.value;
-            document.getElementById('best-score-end').innerText = score.best;
-            document.getElementById('new-record').classList.toggle('hidden', !isBest);
-            
-            document.getElementById('score-display').classList.add('hidden');
-            document.getElementById('game-over-screen').classList.remove('hidden');
+    // --- O'YIN OBYEKTLARI ---
+    
+    // Tank Class
+    class Tank {
+        constructor(x, y, isPlayer = false) {
+            this.x = x;
+            this.y = y;
+            this.isPlayer = isPlayer;
+            this.angle = 0; // Korpus burchagi
+            this.turretAngle = 0; // Minora burchagi
+            this.speed = 0;
+            this.maxSpeed = isPlayer ? 3 : 2;
+            this.hp = isPlayer ? 100 : 30;
+            this.maxHp = this.hp;
+            this.reload = 0;
+            this.colorBody = isPlayer ? '#5a6645' : '#8c5a45'; // Yashil vs Qizg'ish
+            this.colorTurret = isPlayer ? '#465235' : '#6e4536';
+            this.dead = false;
+            this.lastTrackX = x;
+            this.lastTrackY = y;
         }
 
-        function startGame() {
-            state.current = state.game;
-            document.getElementById('start-screen').classList.add('hidden');
-            document.getElementById('score-display').classList.remove('hidden');
-            bird.flap();
-            AudioSys.jump();
+        update(dt) {
+            if (this.dead) return;
+
+            // Harakat
+            this.x += Math.cos(this.angle) * this.speed;
+            this.y += Math.sin(this.angle) * this.speed;
+
+            // Chegara
+            this.x = Math.max(20, Math.min(canvas.width - 20, this.x));
+            this.y = Math.max(20, Math.min(canvas.height - 20, this.y));
+
+            // Iz qoldirish (Tracks)
+            const dist = Math.hypot(this.x - this.lastTrackX, this.y - this.lastTrackY);
+            if(dist > 5) {
+                drawTracks(this.lastTrackX, this.lastTrackY, this.angle);
+                this.lastTrackX = this.x;
+                this.lastTrackY = this.y;
+            }
+
+            // Reload
+            if(this.reload > 0) this.reload -= dt;
         }
 
-        function resetGame() {
-            bird.reset();
-            pipes.reset();
-            particles.reset();
-            score.value = 0;
-            document.getElementById('score-display').innerText = 0;
-            state.current = state.getReady;
-            
-            document.getElementById('game-over-screen').classList.add('hidden');
-            document.getElementById('start-screen').classList.remove('hidden');
-            document.getElementById('best-score-start').innerText = score.best;
-        }
+        draw() {
+            if(this.dead) return; // O'lik tanklar groundCanvas da chiziladi
 
-        // --- MAIN LOOP ---
-        function loop() {
-            // Fizika va Logika
-            bird.update();
-            pipes.update();
-            
-            // Screen Shake (Titroq) logikasi
             ctx.save();
-            if(shake > 0) {
-                let dx = (Math.random() - 0.5) * shake;
-                let dy = (Math.random() - 0.5) * shake;
-                ctx.translate(dx, dy);
-                shake *= 0.9; // So'nish
-            }
-
-            // Chizish (Qatlamlar)
-            bg.draw();
-            pipes.draw();
-            fg.draw();
-            bird.draw();
-            particles.draw();
+            ctx.translate(this.x, this.y);
             
-            ctx.restore();
+            // 1. Korpus (Body)
+            ctx.rotate(this.angle);
+            
+            // G'ildiraklar (Tracks)
+            ctx.fillStyle = '#222';
+            ctx.fillRect(-18, -16, 40, 8); // Chap
+            ctx.fillRect(-18, 8, 40, 8);   // O'ng
+            
+            // Asosiy korpus
+            ctx.fillStyle = this.colorBody;
+            ctx.fillRect(-15, -10, 35, 20);
+            
+            // Detallar (Camo)
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.fillRect(-5, -10, 10, 20);
 
-            // Score HUD (O'yin paytida)
-            if(state.current == state.game) {
-                document.getElementById('score-display').innerText = score.value;
+            // 2. Minora (Turret) - Alohida aylanadi
+            ctx.rotate(-this.angle); // Korpus aylanishini bekor qilish
+            ctx.rotate(this.turretAngle);
+            
+            // Pushka (Barrel)
+            ctx.fillStyle = '#333';
+            ctx.fillRect(0, -3, 35, 6);
+            ctx.fillStyle = '#111'; // Uch qismi
+            ctx.fillRect(30, -4, 6, 8);
+
+            // Minora asosi
+            ctx.fillStyle = this.colorTurret;
+            ctx.beginPath();
+            ctx.arc(0, 0, 12, 0, Math.PI*2);
+            ctx.fill();
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // HP Bar (Dushmanlar uchun)
+            if(!this.isPlayer) {
+                ctx.rotate(-this.turretAngle);
+                ctx.fillStyle = 'red';
+                ctx.fillRect(-15, -30, 30 * (this.hp/this.maxHp), 4);
             }
 
-            frames++;
-            requestAnimationFrame(loop);
+            ctx.restore();
         }
 
-        // --- INPUT ---
-        document.addEventListener("keydown", function(e) {
-            if(e.code === "Space") handleInput();
+        shoot() {
+            if(this.reload <= 0) {
+                const bx = this.x + Math.cos(this.turretAngle) * 35;
+                const by = this.y + Math.sin(this.turretAngle) * 35;
+                bullets.push(new Bullet(bx, by, this.turretAngle, this.isPlayer));
+                this.reload = this.isPlayer ? 20 : 60; // Player tezroq otadi
+                
+                // Recoil (Tepish effekti)
+                this.x -= Math.cos(this.turretAngle) * 2;
+                this.y -= Math.sin(this.turretAngle) * 2;
+                
+                // Partikllar (Olov)
+                for(let i=0; i<5; i++) {
+                    particles.push(new Particle(bx, by, '#ffaa00', 2));
+                }
+                
+                if(this.isPlayer) camera.shake = 5;
+                AudioSys.shoot();
+            }
+        }
+    }
+
+    class Bullet {
+        constructor(x, y, angle, isPlayer) {
+            this.x = x;
+            this.y = y;
+            this.vx = Math.cos(angle) * 12; // O'q tezligi
+            this.vy = Math.sin(angle) * 12;
+            this.isPlayer = isPlayer;
+            this.life = 60;
+        }
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            this.life--;
+            // Tutun izi
+            if(Math.random() > 0.5) {
+                particles.push(new Particle(this.x, this.y, '#aaa', 0.5));
+            }
+        }
+        draw() {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(0, 0, 3, 0, Math.PI*2);
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+
+    class Particle {
+        constructor(x, y, color, speed) {
+            this.x = x;
+            this.y = y;
+            this.color = color;
+            this.life = 1.0;
+            this.decay = Math.random() * 0.05 + 0.02;
+            const angle = Math.random() * Math.PI * 2;
+            const spd = Math.random() * speed;
+            this.vx = Math.cos(angle) * spd;
+            this.vy = Math.sin(angle) * spd;
+            this.size = Math.random() * 5 + 2;
+        }
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            this.life -= this.decay;
+            this.size *= 0.95;
+        }
+        draw() {
+            ctx.globalAlpha = this.life;
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+        }
+    }
+
+    // --- GAME STATE ---
+    const player = new Tank(window.innerWidth/2, window.innerHeight/2, true);
+    let bullets = [];
+    let enemies = [];
+    let particles = [];
+    let score = 0;
+    let gameOver = false;
+    let waveTimer = 0;
+
+    // --- INPUT ---
+    const keys = { w:false, a:false, s:false, d:false };
+    const mouse = { x: 0, y: 0, down: false };
+
+    window.addEventListener('keydown', e => {
+        if(e.key === 'w') keys.w = true;
+        if(e.key === 's') keys.s = true;
+        if(e.key === 'a') keys.a = true;
+        if(e.key === 'd') keys.d = true;
+    });
+    window.addEventListener('keyup', e => {
+        if(e.key === 'w') keys.w = false;
+        if(e.key === 's') keys.s = false;
+        if(e.key === 'a') keys.a = false;
+        if(e.key === 'd') keys.d = false;
+    });
+    window.addEventListener('mousemove', e => {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+    });
+    window.addEventListener('mousedown', () => mouse.down = true);
+    window.addEventListener('mouseup', () => mouse.down = false);
+
+    // Mobil Joystick
+    const joyMove = { x:0, y:0, active:false, touchId:null, base: document.getElementById('joy-move') };
+    const joyAim = { x:0, y:0, active:false, touchId:null, base: document.getElementById('joy-aim') };
+
+    function handleTouch(e, joy, isAim) {
+        e.preventDefault();
+        const rect = joy.base.getBoundingClientRect();
+        const centerX = rect.left + rect.width/2;
+        const centerY = rect.top + rect.height/2;
+
+        for(let i=0; i<e.changedTouches.length; i++) {
+            const t = e.changedTouches[i];
+            const dist = Math.hypot(t.clientX - centerX, t.clientY - centerY);
+            
+            if(e.type === 'touchstart' && dist < 60) {
+                joy.active = true;
+                joy.touchId = t.identifier;
+            }
+            
+            if(joy.active && t.identifier === joy.touchId) {
+                if(e.type === 'touchend') {
+                    joy.active = false;
+                    joy.x = 0; joy.y = 0;
+                    if(isAim) mouse.down = false;
+                } else {
+                    let dx = t.clientX - centerX;
+                    let dy = t.clientY - centerY;
+                    const angle = Math.atan2(dy, dx);
+                    const d = Math.min(dist, 30);
+                    joy.x = Math.cos(angle) * (d/30);
+                    joy.y = Math.sin(angle) * (d/30);
+                    
+                    // Stick vizualizatsiyasi
+                    const stick = joy.base.querySelector('.stick');
+                    stick.style.transform = `translate(-50%, -50%) translate(${joy.x*30}px, ${joy.y*30}px)`;
+
+                    if(isAim) {
+                        player.turretAngle = angle;
+                        mouse.down = true;
+                    }
+                }
+            }
+        }
+    }
+
+    ['touchstart', 'touchmove', 'touchend'].forEach(evt => {
+        document.addEventListener(evt, e => handleTouch(e, joyMove, false), {passive:false});
+        document.addEventListener(evt, e => handleTouch(e, joyAim, true), {passive:false});
+    });
+
+
+    // --- YORDAMCHI FUNKSIYALAR ---
+    
+    function drawTracks(x, y, angle) {
+        gCtx.save();
+        gCtx.translate(x, y);
+        gCtx.rotate(angle);
+        gCtx.fillStyle = 'rgba(0,0,0,0.1)';
+        gCtx.fillRect(-18, -10, 40, 6); // Chap iz
+        gCtx.fillRect(-18, 4, 40, 6);   // O'ng iz
+        gCtx.restore();
+    }
+
+    function createExplosion(x, y) {
+        AudioSys.explosion();
+        camera.shake = 10;
+        // Olov
+        for(let i=0; i<20; i++) {
+            particles.push(new Particle(x, y, '#ffaa00', 5));
+        }
+        // Tutun
+        for(let i=0; i<10; i++) {
+            particles.push(new Particle(x, y, '#444', 3));
+        }
+        // Kuyik izi (Ground Canvas)
+        gCtx.save();
+        gCtx.translate(x, y);
+        gCtx.fillStyle = 'rgba(0,0,0,0.5)';
+        gCtx.beginPath();
+        gCtx.arc(0, 0, 30, 0, Math.PI*2);
+        gCtx.fill();
+        gCtx.restore();
+    }
+
+    function drawDeadTank(tank) {
+        gCtx.save();
+        gCtx.translate(tank.x, tank.y);
+        gCtx.rotate(tank.angle);
+        gCtx.fillStyle = '#444'; // Kuygan korpus
+        gCtx.fillRect(-15, -10, 35, 20);
+        
+        // Minora (uchib ketgan bo'lishi mumkin, shuning uchun biroz qiyshiq)
+        gCtx.rotate(0.5); 
+        gCtx.fillStyle = '#333';
+        gCtx.beginPath();
+        gCtx.arc(5, 5, 10, 0, Math.PI*2);
+        gCtx.fill();
+        gCtx.fillRect(15, 0, 20, 6); // Singan pushka
+        gCtx.restore();
+    }
+
+    // --- MAIN LOOP ---
+    function loop() {
+        if(gameOver) return;
+
+        // 1. Player Logic
+        // Burilish
+        if(IS_MOBILE) {
+            if(Math.abs(joyMove.x) > 0.1) {
+                const targetAngle = Math.atan2(joyMove.y, joyMove.x);
+                // Yumshoq burilish (Lerp)
+                let diff = targetAngle - player.angle;
+                while(diff < -Math.PI) diff += Math.PI*2;
+                while(diff > Math.PI) diff -= Math.PI*2;
+                player.angle += diff * 0.1;
+                player.speed = Math.hypot(joyMove.x, joyMove.y) * player.maxSpeed;
+            } else {
+                player.speed = 0;
+            }
+        } else {
+            // PC
+            if(keys.a) player.angle -= 0.05;
+            if(keys.d) player.angle += 0.05;
+            if(keys.w) player.speed = player.maxSpeed;
+            else if(keys.s) player.speed = -player.maxSpeed * 0.5;
+            else player.speed = 0;
+
+            // Minora sichqonchaga qaraydi
+            const dx = mouse.x - player.x;
+            const dy = mouse.y - player.y;
+            player.turretAngle = Math.atan2(dy, dx);
+            if(mouse.down) player.shoot();
+        }
+
+        player.update(1);
+
+        // 2. Dushmanlar (Spawner)
+        waveTimer++;
+        if(waveTimer > 150 - Math.min(100, score*2)) { // Vaqt o'tgan sari tezlashadi
+            waveTimer = 0;
+            const edge = Math.floor(Math.random()*4); // 0:Top, 1:Right, 2:Bottom, 3:Left
+            let ex, ey;
+            if(edge===0) { ex = Math.random()*canvas.width; ey = -50; }
+            if(edge===1) { ex = canvas.width+50; ey = Math.random()*canvas.height; }
+            if(edge===2) { ex = Math.random()*canvas.width; ey = canvas.height+50; }
+            if(edge===3) { ex = -50; ey = Math.random()*canvas.height; }
+            
+            enemies.push(new Tank(ex, ey));
+        }
+
+        // Dushman Logikasi
+        enemies.forEach((e, i) => {
+            // Playerga qarab yurish
+            const dx = player.x - e.x;
+            const dy = player.y - e.y;
+            const dist = Math.hypot(dx, dy);
+            const targetAngle = Math.atan2(dy, dx);
+            
+            // Korpus burilishi
+            let diff = targetAngle - e.angle;
+            while(diff < -Math.PI) diff += Math.PI*2;
+            while(diff > Math.PI) diff -= Math.PI*2;
+            e.angle += diff * 0.05;
+
+            // Masofa saqlash
+            if(dist > 150) e.speed = 1.5;
+            else if(dist < 100) e.speed = -1;
+            else e.speed = 0;
+
+            // Minora burilishi
+            e.turretAngle = targetAngle;
+            
+            // Otish
+            if(dist < 300) e.shoot();
+
+            e.update(1);
         });
-        document.addEventListe
+
+        // 3. O'qlar va Collision
+        for(let i=bullets.length-1; i>=0; i--) {
+    
