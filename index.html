@@ -1,320 +1,411 @@
 <!DOCTYPE html>
-<html lang="uz">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Cyber Domination</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <title>NIGHT RACER: REDLINE</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Syncopate:wght@700&display=swap');
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial', sans-serif; user-select: none; }
+        canvas { display: block; width: 100%; height: 100%; }
 
-        :root {
-            --neon-blue: #00f2ff;
-            --neon-pink: #ff00ff;
-            --neon-gold: #ffd700;
-            --bg-deep: #020205;
+        /* UI INTERFEYS */
+        #hud {
+            position: absolute; bottom: 20px; right: 20px; text-align: right;
+            pointer-events: none;
+        }
+        #speed-box {
+            color: #fff; font-style: italic;
+            text-shadow: 0 0 10px #ff0055;
+        }
+        #speed-value { font-size: 80px; font-weight: 900; letter-spacing: -2px; }
+        #speed-unit { font-size: 20px; color: #aaa; }
+        
+        #tachometer-bar {
+            width: 300px; height: 10px; background: #333; margin-top: 5px;
+            transform: skewX(-30deg); overflow: hidden; border: 1px solid #555;
+        }
+        #rpm-fill {
+            width: 0%; height: 100%; background: linear-gradient(90deg, #00ffff, #ffff00, #ff0000);
+            transition: width 0.1s linear;
         }
 
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
-            overflow: hidden; background: var(--bg-deep);
-            font-family: 'Orbitron', sans-serif; color: #fff;
-        }
-
-        canvas { display: block; filter: saturate(1.5) contrast(1.2); }
-
-        /* UI OVERLAY */
-        #ui-container {
+        #loading {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 10;
+            background: #000; display: flex; justify-content: center; align-items: center;
+            flex-direction: column; z-index: 999; color: #0ff;
+        }
+        .loader-spin {
+            width: 50px; height: 50px; border: 5px solid #333; border-top: 5px solid #0ff;
+            border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Controls Hint */
+        #controls-hint {
+            position: absolute; top: 20px; left: 20px; color: rgba(255,255,255,0.5); font-size: 14px;
         }
 
-        /* HUD - PULLAR VA SCORE */
-        .hud-bar {
-            position: absolute; top: 20px; left: 0; width: 100%;
-            display: flex; justify-content: space-between; padding: 0 20px;
-            box-sizing: border-box; pointer-events: auto;
+        /* Mobile Controls */
+        .mobile-btn {
+            position: absolute; width: 80px; height: 80px; background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2); border-radius: 50%;
+            display: none; justify-content: center; align-items: center; font-size: 24px; color: white;
+            user-select: none;
         }
+        .mobile-btn:active { background: rgba(0, 255, 255, 0.3); }
+        #btn-left { bottom: 30px; left: 20px; }
+        #btn-right { bottom: 30px; left: 110px; }
+        #btn-brake { bottom: 30px; right: 20px; border-color: rgba(255, 0, 0, 0.4); }
+        #btn-nitro { bottom: 120px; right: 20px; border-color: rgba(255, 255, 0, 0.4); color: yellow; }
 
-        .stat-item {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(0, 242, 255, 0.3);
-            padding: 8px 15px; border-radius: 12px;
-            display: flex; align-items: center; gap: 10px;
-            box-shadow: 0 0 15px rgba(0, 242, 255, 0.2);
-        }
-
-        .coin-val { color: var(--neon-gold); font-weight: 900; font-size: 20px; }
-
-        /* MODAL SCREENS */
-        .screen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); backdrop-filter: blur(20px);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            pointer-events: auto; z-index: 100; transition: 0.5s;
-        }
-
-        h1 {
-            font-family: 'Syncopate', sans-serif; font-size: 40px;
-            text-transform: uppercase; letter-spacing: 10px; margin: 0;
-            background: linear-gradient(to bottom, #fff, var(--neon-blue));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 15px var(--neon-blue));
-        }
-
-        .btn-main {
-            background: var(--neon-blue); color: #000;
-            border: none; padding: 20px 60px; font-size: 22px; font-weight: 900;
-            margin-top: 40px; border-radius: 5px; cursor: pointer;
-            clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
-            transition: 0.3s;
-        }
-
-        .btn-main:active { transform: scale(0.9); background: var(--neon-pink); }
-
-        /* SHOP INTERFACE */
-        #shop-modal { display: none; }
-        .inventory-grid {
-            display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;
-            width: 90%; max-height: 50vh; overflow-y: auto; margin-top: 30px;
-        }
-
-        .skin-card {
-            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 15px; padding: 15px; text-align: center;
-            transition: 0.3s;
-        }
-
-        .skin-card.owned { border-color: var(--neon-blue); }
-        .skin-card.equipped { background: rgba(0, 242, 255, 0.15); border-width: 2px; }
-
-        .preview-circle {
-            width: 50px; height: 50px; border-radius: 50%; margin: 0 auto 10px;
-            box-shadow: 0 0 20px currentColor;
-        }
     </style>
 </head>
 <body>
 
-    <canvas id="gameCanvas"></canvas>
-
-    <div id="ui-container">
-        <div class="hud-bar">
-            <div class="stat-item" onclick="toggleShop(true)">
-                <span style="font-size: 22px;">💰</span>
-                <span id="balance" class="coin-val">0</span>
-            </div>
-            <div id="live-score" style="font-size: 45px; font-weight: 900; color: rgba(255,255,255,0.5);">0</div>
-        </div>
-
-        <div id="menu-screen" class="screen">
-            <h1>NEON FLY</h1>
-            <p style="color: #666; letter-spacing: 3px;">DOMINATION EDITION</p>
-            <div style="margin-top: 20px;">BEST SCORE: <span id="high-score" style="color:var(--neon-pink)">0</span></div>
-            <button class="btn-main" onclick="startGame()">INITIATE</button>
-            <button onclick="toggleShop(true)" style="background:none; border:none; color:var(--neon-gold); margin-top:20px; font-weight:bold; cursor:pointer;">ACCESS MARKET</button>
-        </div>
-
-        <div id="shop-modal" class="screen">
-            <h2 style="color: var(--neon-gold);">BLACK MARKET</h2>
-            <div class="inventory-grid" id="skin-list"></div>
-            <button class="btn-main" style="background:none; border:1px solid #fff; color:#fff; font-size:16px; padding:10px 30px;" onclick="toggleShop(false)">RETURN</button>
-        </div>
+    <div id="loading">
+        <div class="loader-spin"></div>
+        <div id="loading-text">YUKLANMOQDA... (HD Assets)</div>
     </div>
 
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
+    <div id="hud">
+        <div id="speed-box">
+            <span id="speed-value">0</span> <span id="speed-unit">KM/H</span>
+        </div>
+        <div id="tachometer-bar"><div id="rpm-fill"></div></div>
+    </div>
 
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        let w, h, raf, state = 'MENU';
+    <div id="controls-hint">PC: WASD / Arrow Keys | Space: Drift<br>Mobile: On-screen buttons</div>
 
-        // --- ECOSYSTEM DATA ---
-        let User = {
-            coins: parseInt(localStorage.getItem('neon_coins')) || 0,
-            best: parseInt(localStorage.getItem('neon_best')) || 0,
-            equipped: localStorage.getItem('neon_skin') || 'cyan',
-            inventory: JSON.parse(localStorage.getItem('neon_inv')) || ['cyan']
-        };
+    <div id="btn-left" class="mobile-btn">◀</div>
+    <div id="btn-right" class="mobile-btn">▶</div>
+    <div id="btn-brake" class="mobile-btn">🛑</div>
+    <div id="btn-nitro" class="mobile-btn">⚡</div>
 
-        const SKINS = {
-            cyan: { color: '#00f2ff', price: 0, aura: 'rgba(0, 242, 255, 0.5)' },
-            pink: { color: '#ff00ff', price: 100, aura: 'rgba(255, 0, 255, 0.5)' },
-            gold: { color: '#ffd700', price: 500, aura: 'rgba(255, 215, 0, 0.8)' },
-            glitch: { color: '#00ff00', price: 1000, aura: 'rgba(0, 255, 0, 0.9)' }
-        };
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
 
-        function save() {
-            localStorage.setItem('neon_coins', User.coins);
-            localStorage.setItem('neon_best', User.best);
-            localStorage.setItem('neon_skin', User.equipped);
-            localStorage.setItem('neon_inv', JSON.stringify(User.inventory));
-            updateUI();
+    <script type="module">
+        import * as THREE from 'three';
+        import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+        // --- GLOBAL SOZLAMALAR ---
+        const IS_MOBILE = /Android|iPhone|iPad/i.test(navigator.userAgent);
+        if (IS_MOBILE) {
+            document.querySelectorAll('.mobile-btn').forEach(btn => btn.style.display = 'flex');
+            document.getElementById('controls-hint').style.display = 'none';
         }
 
-        function updateUI() {
-            document.getElementById('balance').innerText = User.coins;
-            document.getElementById('high-score').innerText = User.best;
-            renderShop();
-        }
+        // --- SAHNA ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x050505);
+        scene.fog = new THREE.FogExp2(0x050505, 0.015);
+
+        const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 2, -5);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.0;
+        document.body.appendChild(renderer.domElement);
+
+        // --- POST PROCESSING (BLOOM) ---
+        const renderScene = new RenderPass(scene, camera);
+        const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+        bloomPass.threshold = 0.2; // Yorqinlik chegarasi
+        bloomPass.strength = 0.8;  // Nur kuchi (Neon effekt)
+        bloomPass.radius = 0.5;
+
+        const composer = new EffectComposer(renderer);
+        composer.addPass(renderScene);
+        composer.addPass(bloomPass);
+
+        // --- ASSETS YUKLASH (HDRI & Textures) ---
+        const loadingManager = new THREE.LoadingManager();
+        loadingManager.onLoad = () => {
+            const loader = document.getElementById('loading');
+            loader.style.opacity = '0';
+            setTimeout(() => loader.remove(), 1000);
+        };
+
+        const textureLoader = new THREE.TextureLoader(loadingManager);
         
-        // --- GAME LOGIC ---
-        let bird = { x: 80, y: 0, v: 0, r: 18 };
-        let pipes = [];
-        let particles = [];
-        let score = 0, frame = 0;
-
-        function resize() {
-            w = canvas.width = window.innerWidth;
-            h = canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resize); resize();
-
-        function startGame() {
-            state = 'PLAY';
-            document.getElementById('menu-screen').style.display = 'none';
-            bird.y = h/2; bird.v = 0;
-            pipes = []; particles = []; score = 0; frame = 0;
-            loop();
-        }
-
-        function loop() {
-            if(state !== 'PLAY') return;
-            
-            // Physics
-            bird.v += 0.5; // Smooth gravity
-            bird.y += bird.v;
-
-            if(frame++ % 95 === 0) {
-                let gap = 190;
-                let top = Math.random() * (h - gap - 200) + 100;
-                pipes.push({ x: w, t: top, g: gap, p: false });
-            }
-
-            // Draw
-            ctx.fillStyle = '#020205'; ctx.fillRect(0,0,w,h);
-            
-            // Grid background (Full HD effect)
-            ctx.strokeStyle = 'rgba(0, 242, 255, 0.05)';
-            for(let i=0; i<w; i+=50) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.stroke(); }
-
-            let skin = SKINS[User.equipped];
-
-            // Particles
-            if(frame % 2 === 0) particles.push({ x: bird.x-10, y: bird.y, r: Math.random()*5, a: 1, c: skin.color });
-            particles.forEach((p, i) => {
-                p.x -= 3; p.a -= 0.02;
-                ctx.globalAlpha = p.a;
-                ctx.shadowBlur = 10; ctx.shadowColor = p.c;
-                ctx.fillStyle = p.c;
-                ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
-                if(p.a <= 0) particles.splice(i, 1);
-            });
-            ctx.globalAlpha = 1; ctx.shadowBlur = 0;
-
-            // Pipes
-            pipes.forEach((p, i) => {
-                p.x -= 4.5;
-                ctx.fillStyle = '#0a0a1a';
-                ctx.strokeStyle = skin.color;
-                ctx.lineWidth = 3;
-                ctx.shadowBlur = 15; ctx.shadowColor = skin.color;
-                
-                // Neon Pipes
-                ctx.strokeRect(p.x, -10, 60, p.t+10);
-                ctx.strokeRect(p.x, p.t+p.g, 60, h-(p.t+p.g)+10);
-                ctx.shadowBlur = 0;
-
-                // Collision
-                if(bird.x+bird.r > p.x && bird.x-bird.r < p.x+60) {
-                    if(bird.y-bird.r < p.t || bird.y+bird.r > p.t+p.g) endGame();
-                }
-                if(p.x+60 < bird.x && !p.p) {
-                    score++; p.p = true;
-                    document.getElementById('live-score').innerText = score;
-                    tg.HapticFeedback.impactOccurred('medium');
-                }
+        // 1. Asfalt teksturasi (Internetdan)
+        const asphaltColor = textureLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/terrain/grasslight-big.jpg');
+        asphaltColor.wrapS = asphaltColor.wrapT = THREE.RepeatWrapping;
+        asphaltColor.repeat.set(10, 200);
+        
+        // 2. HDRI Environment (Refleksiya uchun)
+        new RGBELoader(loadingManager)
+            .load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/equirectangular/royal_esplanade_1k.hdr', function (texture) {
+                texture.mapping = THREE.EquirectangularReflectionMapping;
+                scene.environment = texture;
+                // scene.background = texture; // Orqa fon qora bo'lib qolgani yaxshi (kechasi)
             });
 
-            // Bird
-            ctx.save();
-            ctx.translate(bird.x, bird.y);
-            ctx.rotate(Math.min(Math.PI/4, Math.max(-Math.PI/4, bird.v * 0.1)));
-            ctx.shadowBlur = 30; ctx.shadowColor = skin.color;
-            ctx.fillStyle = skin.color;
-            ctx.beginPath(); ctx.arc(0,0,bird.r,0,Math.PI*2); ctx.fill();
-            // HUD Eye
-            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(8,-5,6,0,Math.PI*2); ctx.fill();
-            ctx.restore();
+        // --- DUNYO YARATISH ---
+        // Cheksiz yo'l
+        const roadGeo = new THREE.PlaneGeometry(20, 2000);
+        const roadMat = new THREE.MeshStandardMaterial({ 
+            map: asphaltColor,
+            roughness: 0.1, // Juda silliq (yomg'irli effekt)
+            metalness: 0.1,
+            color: 0x222222
+        });
+        const road = new THREE.Mesh(roadGeo, roadMat);
+        road.rotation.x = -Math.PI / 2;
+        scene.add(road);
 
-            if(pipes.length > 0 && pipes[0].x < -100) pipes.shift();
-            if(bird.y > h || bird.y < 0) endGame();
+        // Neon Chiziqlar (Yo'l cheti)
+        const lineGeo = new THREE.BoxGeometry(0.5, 0.1, 2000);
+        const lineMat = new THREE.MeshBasicMaterial({ color: 0x00ffff }); // Neon
+        const leftLine = new THREE.Mesh(lineGeo, lineMat);
+        leftLine.position.set(-10.5, 0, 0);
+        scene.add(leftLine);
+        const rightLine = new THREE.Mesh(lineGeo, lineMat);
+        rightLine.position.set(10.5, 0, 0);
+        scene.add(rightLine);
 
-            raf = requestAnimationFrame(loop);
+        // Binolar (Cityscape procedural)
+        const buildings = [];
+        const boxGeo = new THREE.BoxGeometry(1,1,1);
+        const buildingMat = new THREE.MeshStandardMaterial({ 
+            color: 0x111111, roughness: 0.1, metalness: 0.8 
+        });
+        const windowMat = new THREE.MeshBasicMaterial({ color: 0xff0055 }); // Derazalar
+
+        for(let i=0; i<100; i++) {
+            const h = Math.random() * 20 + 5;
+            const w = Math.random() * 5 + 3;
+            const building = new THREE.Mesh(boxGeo, buildingMat);
+            building.position.set(
+                (Math.random() > 0.5 ? 1 : -1) * (15 + Math.random()*20), 
+                h/2, 
+                Math.random() * -500
+            );
+            building.scale.set(w, h, w);
+            scene.add(building);
+            buildings.push(building);
         }
 
-        function endGame() {
-            state = 'MENU';
-            cancelAnimationFrame(raf);
-            tg.HapticFeedback.notificationOccurred('error');
+        // --- MASHINA (Procedural Super Car) ---
+        // Model yuklashda xatolik bo'lmasligi uchun kodda chiroyli mashina yasaymiz.
+        const carGroup = new THREE.Group();
+        
+        // Kuzov (Car Paint Material - Reflektiv)
+        const carBodyMat = new THREE.MeshPhysicalMaterial({
+            color: 0xff0000, metalness: 0.6, roughness: 0.2, clearcoat: 1.0, clearcoatRoughness: 0.1
+        });
+
+        // Asosiy korpus
+        const chassisGeo = new THREE.BoxGeometry(1.8, 0.5, 4);
+        const chassis = new THREE.Mesh(chassisGeo, carBodyMat);
+        chassis.position.y = 0.5;
+        carGroup.add(chassis);
+
+        // Kabina
+        const cabinGeo = new THREE.BoxGeometry(1.4, 0.4, 2);
+        const cabin = new THREE.Mesh(cabinGeo, new THREE.MeshPhysicalMaterial({
+            color: 0x111111, metalness: 0.9, roughness: 0.1
+        }));
+        cabin.position.set(0, 0.9, -0.2);
+        carGroup.add(cabin);
+
+        // G'ildiraklar
+        const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.3, 24);
+        wheelGeo.rotateZ(Math.PI/2);
+        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.5 });
+        const rimMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 2 }); // Neon Rims
+
+        const wheels = [];
+        function createWheel(x, z) {
+            const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+            const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.31, 16), rimMat);
+            rim.rotateZ(Math.PI/2);
+            wheel.add(rim);
+            wheel.position.set(x, 0.35, z);
+            carGroup.add(wheel);
+            wheels.push(wheel);
+        }
+        createWheel(-0.9, 1.2); createWheel(0.9, 1.2);
+        createWheel(-0.9, -1.2); createWheel(0.9, -1.2);
+
+        // Orqa chiroqlar (Trail effect)
+        const tailLightGeo = new THREE.BoxGeometry(0.4, 0.1, 0.1);
+        const tailLightMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const tl1 = new THREE.Mesh(tailLightGeo, tailLightMat); tl1.position.set(-0.5, 0.5, 2.01); carGroup.add(tl1);
+        const tl2 = new THREE.Mesh(tailLightGeo, tailLightMat); tl2.position.set(0.5, 0.5, 2.01); carGroup.add(tl2);
+
+        scene.add(carGroup);
+
+        // Trafik (Boshqa mashinalar)
+        const traffic = [];
+        const trafficGeo = new THREE.BoxGeometry(1.8, 0.8, 3.5);
+        for(let i=0; i<10; i++) {
+            const tCar = new THREE.Mesh(trafficGeo, new THREE.MeshStandardMaterial({color: 0x555555}));
+            tCar.position.set(
+                (Math.random()-0.5) * 15,
+                0.4,
+                -100 - Math.random() * 400
+            );
             
-            // Economy calculation
-            User.coins += score;
-            if(score > User.best) User.best = score;
-            save();
+            // Orqa chiroq
+            const tLight = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.2, 0.1), new THREE.MeshBasicMaterial({color: 0xff0000}));
+            tLight.position.set(0, 0, 1.76);
+            tCar.add(tLight);
             
-            document.getElementById('menu-screen').style.display = 'flex';
+            scene.add(tCar);
+            traffic.push({ mesh: tCar, speed: 20 + Math.random() * 20 });
         }
 
-        // --- SHOP ENGINE ---
-        function renderShop() {
-            const container = document.getElementById('skin-list');
-            container.innerHTML = '';
-            Object.keys(SKINS).forEach(id => {
-                const s = SKINS[id];
-                const owned = User.inventory.includes(id);
-                const equipped = User.equipped === id;
-                
-                const card = document.createElement('div');
-                card.className = `skin-card ${owned ? 'owned' : ''} ${equipped ? 'equipped' : ''}`;
-                card.innerHTML = `
-                    <div class="preview-circle" style="background:${s.color}; color:${s.color}"></div>
-                    <div style="font-weight:bold; font-size:12px;">${id.toUpperCase()}</div>
-                    <button onclick="handlePurchase('${id}')" style="margin-top:10px; width:100%; border-radius:5px; border:none; padding:5px; background:${equipped?'#0f0':(owned?'#fff':'#ffd700')}; font-weight:bold;">
-                        ${equipped ? 'ACTIVE' : (owned ? 'EQUIP' : s.price + ' 💰')}
-                    </button>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        function handlePurchase(id) {
-            const s = SKINS[id];
-            if(User.inventory.includes(id)) {
-                User.equipped = id;
-            } else if(User.coins >= s.price) {
-                User.coins -= s.price;
-                User.inventory.push(id);
-                User.equipped = id;
-                tg.HapticFeedback.notificationOccurred('success');
-            } else {
-                alert("Mablag' yetarli emas!");
-            }
-            save();
-        }
-
-        function toggleShop(show) {
-            document.getElementById('shop-modal').style.display = show ? 'flex' : 'none';
-        }
+        // --- O'YIN FIZIKASI VA LOGIKASI ---
+        let speed = 0;
+        const maxSpeed = 280;
+        const acceleration = 100;
+        const braking = 150;
+        const friction = 30;
+        let steering = 0;
+        let trackOffset = 0; // Yo'lning siljishi (cheksiz effekt)
 
         // Input
-        const jump = (e) => { if(e) e.preventDefault(); if(state==='PLAY') bird.v = -8; };
-        window.addEventListener('mousedown', jump);
-        window.addEventListener('touchstart', jump, {passive:false});
+        const keys = { w: false, a: false, s: false, d: false, space: false };
+        window.addEventListener('keydown', (e) => {
+            if(e.key === 'w' || e.key === 'ArrowUp') keys.w = true;
+            if(e.key === 's' || e.key === 'ArrowDown') keys.s = true;
+            if(e.key === 'a' || e.key === 'ArrowLeft') keys.a = true;
+            if(e.key === 'd' || e.key === 'ArrowRight') keys.d = true;
+            if(e.key === ' ') keys.space = true;
+        });
+        window.addEventListener('keyup', (e) => {
+            if(e.key === 'w' || e.key === 'ArrowUp') keys.w = false;
+            if(e.key === 's' || e.key === 'ArrowDown') keys.s = false;
+            if(e.key === 'a' || e.key === 'ArrowLeft') keys.a = false;
+            if(e.key === 'd' || e.key === 'ArrowRight') keys.d = false;
+            if(e.key === ' ') keys.space = false;
+        });
 
-        updateUI();
+        // Mobil Input
+        const btnLeft = document.getElementById('btn-left');
+        const btnRight = document.getElementById('btn-right');
+        const btnBrake = document.getElementById('btn-brake');
+        const btnNitro = document.getElementById('btn-nitro');
+
+        btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); keys.a = true; });
+        btnLeft.addEventListener('touchend', (e) => { e.preventDefault(); keys.a = false; });
+        btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); keys.d = true; });
+        btnRight.addEventListener('touchend', (e) => { e.preventDefault(); keys.d = false; });
+        btnBrake.addEventListener('touchstart', (e) => { e.preventDefault(); keys.s = true; });
+        btnBrake.addEventListener('touchend', (e) => { e.preventDefault(); keys.s = false; });
+        btnNitro.addEventListener('touchstart', (e) => { e.preventDefault(); keys.w = true; keys.space = true; }); // Nitro = gaz + drift
+        btnNitro.addEventListener('touchend', (e) => { e.preventDefault(); keys.w = false; keys.space = false; });
+
+
+        // --- LOOP ---
+        const clock = new THREE.Clock();
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = Math.min(clock.getDelta(), 0.1);
+
+            // 1. Fizika (Tezlanish)
+            if (keys.w) speed += acceleration * dt;
+            else if (keys.s) speed -= braking * dt;
+            else speed -= friction * dt;
+
+            // Cheklovlar
+            speed = Math.max(0, Math.min(speed, maxSpeed));
+
+            // 2. Burilish (Steering)
+            const turnSpeed = speed > 20 ? 15 : 0;
+            if (keys.a) steering -= 2 * dt;
+            if (keys.d) steering += 2 * dt;
+            
+            // Rulni qaytarish
+            if (!keys.a && !keys.d) steering *= 0.9;
+            steering = Math.max(-1, Math.min(1, steering));
+
+            // Mashina pozitsiyasi
+            carGroup.position.x += steering * turnSpeed * dt;
+            
+            // Drift effekti (Mashina korpusi burilishi)
+            carGroup.rotation.y = -steering * 0.3; // Rul burilganda korpus qiyshayadi
+            carGroup.rotation.z = -steering * 0.1; // Body roll
+
+            // 3. Cheksiz yo'l illyuziyasi
+            // Biz mashinani emas, dunyoni orqaga suramiz
+            const moveDist = speed * dt;
+            trackOffset += moveDist;
+            
+            // Tekstura offset (Asfalt harakati)
+            asphaltColor.offset.y -= moveDist * 0.05;
+
+            // Binolarni qayta joylashtirish (Loop)
+            buildings.forEach(b => {
+                b.position.z += moveDist;
+                if (b.position.z > 10) {
+                    b.position.z -= 500; // Orqaga o'tkazish
+                    b.position.x = (Math.random() > 0.5 ? 1 : -1) * (15 + Math.random()*20);
+                }
+            });
+
+            // Trafik harakati
+            traffic.forEach(t => {
+                // Trafik bizga qarab sekinroq yuradi yoki biz undan o'tib ketamiz
+                // Nisbiy tezlik: O'yinchining tezligi - botning tezligi
+                const relativeSpeed = speed - t.speed;
+                t.mesh.position.z += relativeSpeed * dt;
+
+                if (t.mesh.position.z > 20) {
+                    t.mesh.position.z = -300 - Math.random() * 200;
+                    t.mesh.position.x = (Math.random() - 0.5) * 15;
+                }
+            });
+
+            // 4. Kamera (Dynamic Chase Cam)
+            // Tezlik oshganda kamera uzoqlashadi va pastga tushadi
+            const targetCamZ = 4 + (speed / maxSpeed) * 3;
+            const targetCamY = 2 - (speed / maxSpeed) * 0.5;
+            const targetFov = 70 + (speed / maxSpeed) * 30; // Speed effect
+
+            camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetCamZ, dt * 2);
+            camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetCamY, dt * 2);
+            camera.position.x = THREE.MathUtils.lerp(camera.position.x, carGroup.position.x * 0.5, dt * 5); // Kameraning mashinaga ergashishi
+            camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, dt * 2);
+            camera.lookAt(carGroup.position.x, 0.5, carGroup.position.z - 5);
+            camera.updateProjectionMatrix();
+
+            // G'ildirak aylanishi
+            wheels.forEach(w => w.rotateX(speed * dt * 0.5));
+
+            // HUD yangilash
+            document.getElementById('speed-value').innerText = Math.floor(speed);
+            document.getElementById('rpm-fill').style.width = (speed / maxSpeed * 100) + '%';
+
+            // Render
+            composer.render();
+        }
+
+        animate();
+
+        // Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        });
+
     </script>
 </body>
-</html>
+                                                </html>
+                                                
