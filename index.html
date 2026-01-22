@@ -1,157 +1,567 @@
 <!DOCTYPE html>
-<html>
+<html lang="uz">
 <head>
-<meta charset="utf-8">
-<title>NFS Web – Single File</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<style>
-html,body{margin:0;overflow:hidden;background:black}
-#ui{position:fixed;top:10px;left:10px;color:#0f0;font-family:monospace}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synesthesia Dream Machine</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            background: #000;
+        }
+        
+        #mainCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+        
+        #ui {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        #title {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            color: #fff;
+            pointer-events: auto;
+        }
+        
+        #title h1 {
+            font-size: clamp(24px, 5vw, 48px);
+            background: linear-gradient(45deg, #ff6ec4, #7873f5, #4ade80, #fbbf24);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 3s ease infinite;
+            text-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+        }
+        
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        .subtitle {
+            font-size: clamp(12px, 2vw, 16px);
+            color: #888;
+            margin-top: 10px;
+        }
+        
+        #emotionPanel {
+            position: absolute;
+            left: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 25px;
+            border-radius: 20px;
+            border: 2px solid #7873f5;
+            box-shadow: 0 0 40px rgba(120, 115, 245, 0.5);
+            pointer-events: auto;
+            max-width: 300px;
+        }
+        
+        #emotionPanel h3 {
+            color: #7873f5;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        
+        .emotion-btn {
+            width: 100%;
+            padding: 15px;
+            margin: 8px 0;
+            border: 2px solid;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .emotion-btn:hover {
+            transform: translateX(10px);
+            box-shadow: 0 5px 20px rgba(255, 255, 255, 0.3);
+        }
+        
+        .emotion-btn.active {
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 30px currentColor;
+        }
+        
+        #sensoryOutput {
+            position: absolute;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 25px;
+            border-radius: 20px;
+            border: 2px solid #ff6ec4;
+            box-shadow: 0 0 40px rgba(255, 110, 196, 0.5);
+            pointer-events: auto;
+            max-width: 350px;
+            min-width: 300px;
+        }
+        
+        #sensoryOutput h3 {
+            color: #ff6ec4;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        
+        .sensory-item {
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border-left: 4px solid;
+        }
+        
+        .sensory-item .label {
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+        
+        .sensory-item .value {
+            color: #aaa;
+            font-size: 14px;
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            pointer-events: auto;
+        }
+        
+        .control-btn {
+            padding: 15px 30px;
+            background: linear-gradient(45deg, #7873f5, #ff6ec4);
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 20px rgba(120, 115, 245, 0.4);
+        }
+        
+        .control-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(120, 115, 245, 0.6);
+        }
+        
+        .control-btn:active {
+            transform: translateY(0);
+        }
+        
+        #moodInput {
+            position: absolute;
+            top: 150px;
+            left: 50%;
+            transform: translateX(-50%);
+            pointer-events: auto;
+            text-align: center;
+        }
+        
+        #moodInput input {
+            padding: 15px 25px;
+            font-size: 18px;
+            border: 2px solid #7873f5;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            width: 400px;
+            max-width: 90vw;
+            text-align: center;
+        }
+        
+        #moodInput input::placeholder {
+            color: #666;
+        }
+        
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            z-index: 5;
+            font-size: 24px;
+            animation: float 3s ease-out forwards;
+        }
+        
+        @keyframes float {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(0);
+            }
+            50% {
+                transform: scale(1.5);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-200px) scale(1);
+            }
+        }
+        
+        #audioVisualizer {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 5px;
+            align-items: flex-end;
+            height: 100px;
+        }
+        
+        .visualizer-bar {
+            width: 8px;
+            background: linear-gradient(to top, #7873f5, #ff6ec4);
+            border-radius: 4px;
+            transition: height 0.1s;
+        }
+        
+        #intro {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #000000, #1a1a2e, #000000);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        #intro h1 {
+            font-size: clamp(32px, 8vw, 72px);
+            background: linear-gradient(45deg, #ff6ec4, #7873f5, #4ade80);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 3s ease infinite;
+            margin-bottom: 30px;
+        }
+        
+        #intro p {
+            color: #aaa;
+            font-size: clamp(14px, 3vw, 20px);
+            max-width: 700px;
+            line-height: 1.8;
+            margin: 20px 0;
+        }
+        
+        .intro-btn {
+            padding: 20px 60px;
+            margin-top: 30px;
+            background: linear-gradient(45deg, #ff6ec4, #7873f5);
+            border: none;
+            border-radius: 15px;
+            color: #fff;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 30px rgba(120, 115, 245, 0.5);
+        }
+        
+        .intro-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(120, 115, 245, 0.7);
+        }
+
+        @media (max-width: 768px) {
+            #emotionPanel, #sensoryOutput {
+                position: relative;
+                left: auto;
+                right: auto;
+                top: auto;
+                transform: none;
+                margin: 20px auto;
+                max-width: 90vw;
+            }
+            
+            #controls {
+                bottom: 10px;
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
 </head>
 <body>
+    <canvas id="mainCanvas"></canvas>
+    
+    <div id="intro">
+        <h1>🧠 Synesthesia Dream Machine</h1>
+        <p>
+            <strong>Dunyodagi birinchi multisensory AI tajriba!</strong><br><br>
+            Bu dastur sizning his-tuyg'ularingizni:<br>
+            🎨 Ranglarga<br>
+            🎵 Musiqaga<br>
+            👃 Hidlarga<br>
+            👅 Ta'mlarga<br>
+            🌊 Teksturalarga<br>
+            aylantirib, virtual sinesteziya yaratadi!
+        </p>
+        <p style="color: #ff6ec4;">
+            ⚠️ Tajriba: Hissiyotlar → Multisensor tajriba
+        </p>
+        <button class="intro-btn" onclick="startExperience()">
+            🚀 TAJRIBANI BOSHLASH
+        </button>
+    </div>
+    
+    <div id="ui">
+        <div id="title">
+            <h1>🧠 Synesthesia Dream Machine</h1>
+            <p class="subtitle">Hissiyotlarni Sensor Ma'lumotlarga Aylantiruvchi AI</p>
+        </div>
+        
+        <div id="moodInput">
+            <input type="text" id="customMood" placeholder="Kayfiyatingizni yozing... (misol: baxtli, g'amgin, hayajonli)" />
+        </div>
+        
+        <div id="emotionPanel">
+            <h3>🎭 Hissiyotlar</h3>
+            <button class="emotion-btn" style="border-color: #fbbf24;" data-emotion="happiness">
+                😊 Baxt
+            </button>
+            <button class="emotion-btn" style="border-color: #3b82f6;" data-emotion="sadness">
+                😢 G'am
+            </button>
+            <button class="emotion-btn" style="border-color: #ef4444;" data-emotion="anger">
+                😠 G'azab
+            </button>
+            <button class="emotion-btn" style="border-color: #8b5cf6;" data-emotion="fear">
+                😰 Qo'rquv
+            </button>
+            <button class="emotion-btn" style="border-color: #ec4899;" data-emotion="love">
+                ❤️ Muhabbat
+            </button>
+            <button class="emotion-btn" style="border-color: #10b981;" data-emotion="peace">
+                🕊️ Tinchlik
+            </button>
+            <button class="emotion-btn" style="border-color: #f97316;" data-emotion="excitement">
+                🎉 Hayajon
+            </button>
+            <button class="emotion-btn" style="border-color: #06b6d4;" data-emotion="nostalgia">
+                🌅 Nostalgia
+            </button>
+        </div>
+        
+        <div id="sensoryOutput">
+            <h3>🌈 Sensor Chiqish</h3>
+            <div class="sensory-item" style="border-color: #ff6ec4;">
+                <div class="label">🎨 Rang Palitra:</div>
+                <div class="value" id="colorOutput">Tanlang...</div>
+            </div>
+            <div class="sensory-item" style="border-color: #7873f5;">
+                <div class="label">🎵 Musiqa:</div>
+                <div class="value" id="soundOutput">Tanlang...</div>
+            </div>
+            <div class="sensory-item" style="border-color: #4ade80;">
+                <div class="label">👃 Hid:</div>
+                <div class="value" id="smellOutput">Tanlang...</div>
+            </div>
+            <div class="sensory-item" style="border-color: #fbbf24;">
+                <div class="label">👅 Ta'm:</div>
+                <div class="value" id="tasteOutput">Tanlang...</div>
+            </div>
+            <div class="sensory-item" style="border-color: #06b6d4;">
+                <div class="label">🌊 Tekstura:</div>
+                <div class="value" id="textureOutput">Tanlang...</div>
+            </div>
+            <div class="sensory-item" style="border-color: #f97316;">
+                <div class="label">🌡️ Harorat:</div>
+                <div class="value" id="tempOutput">Tanlang...</div>
+            </div>
+        </div>
+        
+        <div id="audioVisualizer"></div>
+        
+        <div id="controls">
+            <button class="control-btn" onclick="randomEmotion()">🎲 Tasodifiy</button>
+            <button class="control-btn" onclick="mixEmotions()">🌀 Aralashtirish</button>
+            <button class="control-btn" onclick="saveProfile()">💾 Saqlash</button>
+            <button class="control-btn" onclick="toggleAudio()">🔊 Audio</button>
+        </div>
+    </div>
 
-<div id="ui">
-Speed: <span id="spd">0</span><br>
-Nitro: <span id="nit">100</span>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-
-<script>
-/* =======================
-   EXTERNAL SERVER LOAD
-======================= */
-
-let carStats = {
-  maxSpeed: 220,
-  accel: 12,
-  handling: 0.03,
-  nitro: 40
-};
-
-fetch("https://raw.githubusercontent.com/microsoft/PowerBI-Developer-Samples/master/assets/sampledata.json")
-.then(r=>r.json())
-.then(data=>{
-  // simulate server tuning
-  carStats.maxSpeed = 260;
-  carStats.accel = 16;
-  carStats.handling = 0.04;
-  carStats.nitro = 60;
-  console.log("Loaded from server:",carStats);
-});
-
-/* =======================
-   THREE SETUP
-======================= */
-
-const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x000000,10,80);
-
-const camera = new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,500);
-camera.position.set(0,4,10);
-
-const renderer = new THREE.WebGLRenderer({antialias:false});
-renderer.setSize(innerWidth,innerHeight);
-document.body.appendChild(renderer.domElement);
-
-scene.add(new THREE.HemisphereLight(0x00ffff,0x080820,1));
-
-/* =======================
-   ROAD
-======================= */
-
-const roadGeo = new THREE.PlaneGeometry(2000,20);
-const roadMat = new THREE.MeshStandardMaterial({
- color:0x111111,
- metalness:0.8,
- roughness:0.3
-});
-const road = new THREE.Mesh(roadGeo,roadMat);
-road.rotation.x = -Math.PI/2;
-scene.add(road);
-
-/* =======================
-   CAR
-======================= */
-
-const car = new THREE.Mesh(
- new THREE.BoxGeometry(2,0.8,4),
- new THREE.MeshStandardMaterial({
-  color:0xffaa00,
-  metalness:0.9,
-  roughness:0.2
- })
-);
-car.position.y=0.4;
-scene.add(car);
-
-/* =======================
-   PHYSICS
-======================= */
-
-let speed=0;
-let nitro=100;
-let keys={};
-
-addEventListener("keydown",e=>keys[e.key]=true);
-addEventListener("keyup",e=>keys[e.key]=false);
-
-/* =======================
-   GAME LOOP
-======================= */
-
-let last=performance.now();
-
-function loop(t){
- const dt=(t-last)/1000;
- last=t;
-
- // ACCEL
- if(keys["w"]) speed += carStats.accel * dt;
- if(keys["s"]) speed -= carStats.accel * dt;
-
- // NITRO
- if(keys[" "] && nitro>0){
-   speed += carStats.nitro * dt;
-   nitro -= 30*dt;
- }
-
- speed *= 0.99;
-
- if(speed > carStats.maxSpeed) speed = carStats.maxSpeed;
- if(speed < -50) speed = -50;
-
- // STEER
- if(keys["a"]) car.rotation.y += carStats.handling * speed * dt;
- if(keys["d"]) car.rotation.y -= carStats.handling * speed * dt;
-
- // MOVE
- const forward = new THREE.Vector3(0,0,-1).applyQuaternion(car.quaternion);
- car.position.addScaledVector(forward,speed*dt);
-
- // CAMERA
- camera.position.lerp(
-   car.position.clone().add(new THREE.Vector3(0,5,12).applyQuaternion(car.quaternion)),
-   0.08
- );
- camera.lookAt(car.position);
-
- document.getElementById("spd").innerText = speed.toFixed(0);
- document.getElementById("nit").innerText = nitro.toFixed(0);
-
- renderer.render(scene,camera);
- requestAnimationFrame(loop);
-}
-
-loop(last);
-
-addEventListener("resize",()=>{
- camera.aspect=innerWidth/innerHeight;
- camera.updateProjectionMatrix();
- renderer.setSize(innerWidth,innerHeight);
-});
-</script>
-
-</body>
-</html>
+    <script>
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+        
+        // Emotion to sensory mapping database
+        const emotionDatabase = {
+            happiness: {
+                colors: ['#fbbf24', '#fcd34d', '#fde047', '#facc15'],
+                sounds: ['C Major chord', 'Upbeat melody', 'Birds chirping', 'Laughter'],
+                smells: ['Fresh flowers', 'Citrus', 'Vanilla', 'Sweet candy'],
+                tastes: ['Honey', 'Chocolate', 'Strawberry', 'Sugar'],
+                textures: ['Soft velvet', 'Warm sand', 'Fluffy clouds'],
+                temperature: 'Warm (28°C)',
+                patterns: ['circles', 'spirals', 'stars']
+            },
+            sadness: {
+                colors: ['#3b82f6', '#60a5fa', '#93c5fd', '#1e3a8a'],
+                sounds: ['Minor chords', 'Rain drops', 'Cello', 'Wind'],
+                smells: ['Rain', 'Old books', 'Wet earth', 'Sea breeze'],
+                tastes: ['Salt', 'Black coffee', 'Dark chocolate', 'Bitter herbs'],
+                textures: ['Cold metal', 'Smooth glass', 'Heavy fabric'],
+                temperature: 'Cool (15°C)',
+                patterns: ['waves', 'tears', 'rain']
+            },
+            anger: {
+                colors: ['#ef4444', '#dc2626', '#b91c1c', '#ff6b6b'],
+                sounds: ['Loud drums', 'Thunder', 'Heavy metal', 'Crashing'],
+                smells: ['Smoke', 'Gunpowder', 'Leather', 'Spicy'],
+                tastes: ['Hot pepper', 'Bitter', 'Sour', 'Strong coffee'],
+                textures: ['Rough sandpaper', 'Sharp edges', 'Hot surface'],
+                temperature: 'Hot (45°C)',
+                patterns: ['lightning', 'spikes', 'chaos']
+            },
+            fear: {
+                colors: ['#8b5cf6', '#6d28d9', '#5b21b6', '#4c1d95'],
+                sounds: ['Heartbeat', 'Whispers', 'Eerie silence', 'Suspense'],
+                smells: ['Cold sweat', 'Metallic', 'Musty', 'Chemical'],
+                tastes: ['Metallic', 'Sour', 'Bland', 'Bitter'],
+                textures: ['Sticky', 'Cold sweat', 'Trembling'],
+                temperature: 'Chilly (8°C)',
+                patterns: ['shadows', 'eyes', 'fractals']
+            },
+            love: {
+                colors: ['#ec4899', '#f43f5e', '#fb7185', '#fda4af'],
+                sounds: ['Soft piano', 'Romantic strings', 'Heartbeat', 'Whispers'],
+                smells: ['Rose', 'Jasmine', 'Perfume', 'Chocolate'],
+                tastes: ['Sweet wine', 'Strawberry', 'Vanilla cream', 'Honey'],
+                textures: ['Silk', 'Soft skin', 'Warm embrace'],
+                temperature: 'Warm (32°C)',
+                patterns: ['hearts', 'flowers', 'curves']
+            },
+            peace: {
+                colors: ['#10b981', '#34d399', '#6ee7b7', '#a7f3d0'],
+                sounds: ['Om', 'Wind chimes', 'Water flowing', 'Nature'],
+                smells: ['Lavender', 'Chamomile', 'Fresh grass', 'Pine'],
+                tastes: ['Green tea', 'Mint', 'Fresh water', 'Cucumber'],
+                textures: ['Smooth stone', 'Cool water', 'Soft moss'],
+                temperature: 'Comfortable (22°C)',
+                patterns: ['mandalas', 'zen', 'nature']
+            },
+            excitement: {
+                colors: ['#f97316', '#fb923c', '#fdba74', '#fed7aa'],
+                sounds: ['Fast tempo', 'Electronic beats', 'Crowd cheering', 'Energy'],
+                smells: ['Adrenaline', 'Fresh air', 'Popcorn', 'Fireworks'],
+                tastes: ['Fizzy soda', 'Pop rocks', 'Energy drink', 'Sour candy'],
+                textures: ['Electric', 'Vibrating', 'Energetic'],
+                temperature: 'Dynamic (25-35°C)',
+                patterns: ['explosions', 'fireworks', 'energy']
+            },
+            nostalgia: {
+                colors: ['#06b6d4', '#0891b2', '#0e7490', '#fef3c7'],
+                sounds: ['Old music box', 'Vintage radio', 'Children playing', 'Old songs'],
+                smells: ['Old photographs', 'Grandmother\'s perfume', 'Old books', 'Childhood home'],
+                tastes: ['Grandma\'s cookies', 'Childhood candy', 'Simple food', 'Milk'],
+                textures: ['Worn fabric', 'Old wood', 'Faded photos'],
+                temperature: 'Memory lane (20°C)',
+                patterns: ['vintage', 'sepia', 'memories']
+            }
+        };
+        
+        let currentEmotion = null;
+        let particles = [];
+        let audioContext = null;
+        let isAudioEnabled = false;
+        
+        // Initialize visualizer bars
+        const visualizer = document.getElementById('audioVisualizer');
+        for (let i = 0; i < 32; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'visualizer-bar';
+            bar.style.height = '10px';
+            visualizer.appendChild(bar);
+        }
+        
+        function startExperience() {
+            document.getElementById('intro').style.display = 'none';
+            animateBackground();
+        }
+        
+        // Emotion button handlers
+        document.querySelectorAll('.emotion-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.emotion-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const emotion = btn.dataset.emotion;
+                activateEmotion(emotion);
+            });
+        });
+        
+        // Custom mood input
+        document.getElementById('customMood').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const mood = e.target.value.toLowerCase();
+                analyzeCustomMood(mood);
+            }
+        });
+        
+        function activateEmotion(emotion) {
+            currentEmotion = emotion;
+            const data = emotionDatabase[emotion];
+            
+            // Update sensory outputs
+            document.getElementById('colorOutput').textContent = data.colors.join(', ');
+            document.getElementById('soundOutput').textContent = data.sounds.join(', ');
+            document.getElementById('smellOutput').textContent = data.smells.join(', ');
+            document.getElementById('tasteOutput').textContent = data.tastes.join(', ');
+            document.getElementById('textureOutput').textContent = data.textures.join(', ');
+            document.getElementById('tempOutput').textContent = data.temperature;
+            
+            // Create particles
+            createEmotionParticles(emotion);
+          
